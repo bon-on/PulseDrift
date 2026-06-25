@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "repoName": "PulseDrift",
+  "description": "하네스 엔지니어링과 스펙 기반 전달 방식을 적용한 크로스플랫폼 레인 회피 게임 저장소.",
+  "policyMode": "warn-block-critical",
+  "stackSummary": "스펙 기반 하네스 산출물을 갖춘 Flutter 모바일 게임 저장소",
+  "sourcePriority": [
+    "feature spec",
+    "related adr",
+    "repo constraints",
+    "golden rules",
+    "general repo context"
+  ],
+  "detectedProfiles": [],
+  "suggestedPacks": [],
+  "approvedPacks": [],
+  "detectedSignals": [
+    "cross-platform-mobile",
+    "flutter-runtime-active",
+    "spec-driven-harness"
+  ],
+  "paths": {
+    "rulesDir": "harness/rules",
+    "specsDir": "harness/specs",
+    "adrsDir": "harness/adrs",
+    "contractsDir": "harness/contracts",
+    "templatesDir": "harness/templates",
+    "reportsDir": "reports"
+  },
+  "requiredFiles": [
+    "harness/rules/golden-rules.md",
+    "harness/rules/constraints.md",
+    "harness/templates/feature-spec.md",
+    "harness/templates/adr.md",
+    "harness/templates/contract.md"
+  ],
+  "criticalChecks": [
+    "manifest-present",
+    "golden-rules-present",
+    "constraints-present",
+    "feature-spec-has-acceptance"
+  ]
+}
