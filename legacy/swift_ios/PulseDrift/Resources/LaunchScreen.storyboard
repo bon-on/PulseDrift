@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <scene sceneID="EHf-IW-A2E">
+            <objects>
+                <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="J0X-WP-rzn">
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                <subviews>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchGlyph" translatesAutoresizingMaskIntoConstraints="NO" id="sVq-jP-CPn">
+                                        <rect key="frame" x="104.5" y="286" width="184" height="184"/>
+                                    </imageView>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Pulse Drift" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="CoH-j5-VcD">
+                                        <rect key="frame" x="93" y="494" width="207" height="43"/>
+                                        <fontDescription key="fontDescription" type="system" weight="heavy" pointSize="36"/>
+                                        <color key="textColor" red="0.9725490196" green="0.9725490196" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Shift lanes. Ride the pulse." textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="8Ia-8H-Tc0">
+                                        <rect key="frame" x="100.5" y="547" width="192" height="20.5"/>
+                                        <fontDescription key="fontDescription" type="system" weight="medium" pointSize="17"/>
+                                        <color key="textColor" red="0.7647058824" green="0.8862745098" blue="0.9098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                </subviews>
+                                <color key="backgroundColor" red="0.04705882353" green="0.08235294118" blue="0.1568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstItem="sVq-jP-CPn" firstAttribute="centerX" secondItem="J0X-WP-rzn" secondAttribute="centerX" id="2cD-C4-6hN"/>
+                                    <constraint firstItem="8Ia-8H-Tc0" firstAttribute="top" secondItem="CoH-j5-VcD" secondAttribute="bottom" constant="10" id="A2m-bp-LvR"/>
+                                    <constraint firstItem="CoH-j5-VcD" firstAttribute="centerX" secondItem="J0X-WP-rzn" secondAttribute="centerX" id="Gpm-aC-4Nt"/>
+                                    <constraint firstItem="sVq-jP-CPn" firstAttribute="width" secondItem="sVq-jP-CPn" secondAttribute="height" multiplier="1:1" id="KTc-KH-WVu"/>
+                                    <constraint firstItem="sVq-jP-CPn" firstAttribute="height" constant="184" id="MAb-6X-4o8"/>
+                                    <constraint firstItem="8Ia-8H-Tc0" firstAttribute="centerX" secondItem="J0X-WP-rzn" secondAttribute="centerX" id="Sbl-Nh-SDo"/>
+                                    <constraint firstItem="CoH-j5-VcD" firstAttribute="top" secondItem="sVq-jP-CPn" secondAttribute="bottom" constant="24" id="ZOL-nA-8nC"/>
+                                    <constraint firstItem="sVq-jP-CPn" firstAttribute="centerY" secondItem="J0X-WP-rzn" secondAttribute="centerY" constant="-48" id="ud0-rG-MPc"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
+                        <color key="backgroundColor" red="0.04705882353" green="0.08235294118" blue="0.1568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="J0X-WP-rzn" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="5v0-Ha-q4P"/>
+                            <constraint firstAttribute="bottom" secondItem="J0X-WP-rzn" secondAttribute="bottom" id="AoW-cg-IqQ"/>
+                            <constraint firstAttribute="trailing" secondItem="J0X-WP-rzn" secondAttribute="trailing" id="iXb-nW-jYQ"/>
+                            <constraint firstItem="J0X-WP-rzn" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="nqc-Kq-XDl"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="LaunchGlyph" width="1024" height="1024"/>
+    </resources>
+</document>
