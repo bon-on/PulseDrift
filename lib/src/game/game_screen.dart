@@ -7,6 +7,7 @@ import '../ads/ad_banner.dart';
 import '../ads/ad_service.dart';
 import '../audio/audio_controller.dart';
 import '../persistence/best_score_store.dart';
+import '../../result_registration.dart';
 import 'game_controller.dart';
 import 'game_painter.dart';
 
@@ -53,6 +54,19 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _handleGameOverAds() {
+    if (_controller.isGameOver && !_wasGameOver) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          offerResultRegistration(
+            context,
+            gameId: 'pulse-drift',
+            metric: 'score',
+            value: _controller.score,
+            displayValue: '${_controller.score}점',
+          );
+        }
+      });
+    }
     if (!widget.enableAds) {
       _wasGameOver = _controller.isGameOver;
       return;
