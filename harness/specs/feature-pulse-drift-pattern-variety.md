@@ -45,7 +45,10 @@ This spec supersedes the "no fixed cap on speed" criterion of
   play column shifts one lane; dragging still follows the pointer. Space or
   Enter restarts after game over.
 - Layout: play column centered with max width 480 px on desktop, full width on
-  phones; on web the 48 px hub bar height is reserved at the top.
+  phones; on web the Flutter view is embedded in the `#game-host` element below
+  the hub bar (web/index.html), so no app-side offset is needed.
+- Tap vs drag: a tap shifts one lane; a drag follows the pointer. Flutter's pan
+  slop already keeps small mouse jitter (a few px) classified as a tap.
 
 ## Numbers and rationale
 - Speed: `280 + 360 * (1 - 0.88^n)`, clamped to 600. The curve is unchanged

@@ -82,7 +82,8 @@ class GameController extends ChangeNotifier {
 
     _viewportSize = size;
     _playerVisualX = laneCenters[_currentLane];
-    notifyListeners();
+    // No notify: this runs during LayoutBuilder's build, and the ticker
+    // repaints every frame anyway.
   }
 
   void handlePointerX(double xPosition) {
