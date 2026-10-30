@@ -16,21 +16,72 @@ class GameBalance {
     return math.min(rawValue, 3.5);
   }
 
+  /// Fall speed plateaus here so late runs stay readable; difficulty then
+  /// grows through pattern variety instead of raw speed.
+  static const double maxSpeed = 600;
+  static const double nearMissBonus = 15;
+  static const double nearMissWindowSeconds = 0.18;
+
+  /// Seconds between the two gates of a double pattern.
+  static const double doubleGateGapSeconds = 0.65;
+
+  /// Seconds between a two-open-lane bait gate and the single-gap gate behind it.
+  static const double baitGateGapSeconds = 0.75;
+
   static double speedFor(int cleanDodges) {
     final earlyRamp = (1.0 - math.pow(0.88, cleanDodges)) * 360;
-    final endlessRamp = math.max(0, cleanDodges - 12) * 32.0;
-    return baseSpeed + earlyRamp + endlessRamp;
+    return math.min(baseSpeed + earlyRamp, maxSpeed);
   }
 
   static double gateSpawnDelayFor(int cleanDodges) {
     final rawValue = 1.32 - (cleanDodges * 0.025);
-    return math.max(rawValue, 0.48);
+    return math.max(rawValue, 0.62);
   }
 
-  static double sparkSpawnDelayFor(int cleanDodges) {
-    final rawValue = 3.4 - (cleanDodges * 0.04);
-    return math.max(rawValue, 1.9);
+  /// Chance (0..1) that the next gate spawns as a quick double gate.
+  static double doubleChanceFor(int cleanDodges) {
+    if (cleanDodges < 4) return 0;
+    return math.min(0.10 + (cleanDodges - 4) * 0.02, 0.30);
   }
+
+  /// Chance (0..1) that the next gate spawns as a spark bait pair.
+  static double baitChanceFor(int cleanDodges) {
+    if (cleanDodges < 8) return 0;
+    return math.min(0.08 + (cleanDodges - 8) * 0.01, 0.20);
+  }
+
+  /// Picks the next pattern from a uniform [roll] in [0, 1).
+  static GatePattern patternFor(int cleanDodges, double roll) {
+    final bait = baitChanceFor(cleanDodges);
+    final doubleChance = doubleChanceFor(cleanDodges);
+    if (roll < bait) return GatePattern.bait;
+    if (roll < bait + doubleChance) return GatePattern.doubleGate;
+    return GatePattern.single;
+  }
+
+  /// Layout of a bait pair whose second gate is open only in [exitLane].
+  /// The first gate walls off [BaitLayout.wallLane] and the spark sits in the
+  /// open lane farthest from the exit, so grabbing it costs a lane change.
+  /// [roll] only matters for the middle exit lane, where both sides are equal.
+  static BaitLayout baitLayoutFor(int exitLane, double roll) {
+    if (exitLane != 1) {
+      return BaitLayout(wallLane: 1, sparkLane: laneCount - 1 - exitLane);
+    }
+    final sparkLane = roll < 0.5 ? 0 : laneCount - 1;
+    return BaitLayout(
+      wallLane: laneCount - 1 - sparkLane,
+      sparkLane: sparkLane,
+    );
+  }
+}
+
+enum GatePattern { single, doubleGate, bait }
+
+class BaitLayout {
+  const BaitLayout({required this.wallLane, required this.sparkLane});
+
+  final int wallLane;
+  final int sparkLane;
 }
 
 class GameGeometry {

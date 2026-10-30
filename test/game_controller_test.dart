@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pulse_drift/src/game/game_balance.dart';
 import 'package:pulse_drift/src/game/game_controller.dart';
 import 'package:pulse_drift/src/persistence/best_score_store.dart';
 
@@ -59,7 +61,7 @@ void main() {
 
     for (var index = 0; index < 8; index++) {
       final safeLane =
-          controller.laneCenters[controller.gates.first.blockedLane];
+          controller.laneCenters[controller.gates.first.openLanes.first];
       controller.handlePointerX(safeLane);
       controller.update(0.12);
       if (controller.score > 0 || controller.isGameOver) {
@@ -69,5 +71,101 @@ void main() {
 
     expect(controller.score, greaterThan(0));
     expect(store.current, controller.bestScore);
+  });
+
+  test('shiftLane moves one lane and clamps at the edges', () {
+    final controller = GameController(bestScoreStore: InMemoryBestScoreStore());
+    controller.setViewportSize(const Size(300, 600));
+
+    controller.shiftLane(-1);
+    expect(controller.currentLane, 0);
+    controller.shiftLane(-1);
+    expect(controller.currentLane, 0);
+    controller.shiftLane(1);
+    controller.shiftLane(1);
+    controller.shiftLane(1);
+    expect(controller.currentLane, 2);
+  });
+
+  GameController spawnFirstGate({int dodges = 0}) {
+    final controller = GameController(
+      bestScoreStore: InMemoryBestScoreStore(),
+      random: math.Random(3),
+    );
+    controller.setViewportSize(const Size(300, 600));
+    controller.debugSetCleanDodges(dodges);
+    controller.update(GameBalance.gateSpawnDelayFor(dodges) + 0.01);
+    return controller;
+  }
+
+  test('a late lane switch into the open lane earns the near-miss bonus', () {
+    final controller = spawnFirstGate();
+    final gate = controller.gates.first;
+    final wrongLane = [0, 1, 2].firstWhere((l) => !gate.openLanes.contains(l));
+    controller.shiftLane(wrongLane - controller.currentLane);
+    final openLane = gate.openLanes.first;
+    var switched = false;
+    for (var i = 0; i < 400 && !controller.isGameOver; i++) {
+      if (!switched && gate.yPosition >= 480 - 34 - controller.speed * 0.1) {
+        controller.shiftLane(openLane - controller.currentLane);
+        switched = true;
+      }
+      controller.update(0.01);
+      if (gate.scored) break;
+    }
+    expect(controller.isGameOver, isFalse);
+    expect(controller.nearMisses, 1);
+    expect(controller.score, greaterThan(GameBalance.nearMissBonus));
+  });
+
+  test('switching early is not a near miss', () {
+    final controller = spawnFirstGate();
+    final gate = controller.gates.first;
+    final wrongLane = [0, 1, 2].firstWhere((l) => !gate.openLanes.contains(l));
+    controller.shiftLane(wrongLane - controller.currentLane);
+    controller.update(0.2);
+    controller.shiftLane(gate.openLanes.first - controller.currentLane);
+    for (var i = 0; i < 400 && !gate.scored; i++) {
+      controller.update(0.01);
+    }
+    expect(controller.isGameOver, isFalse);
+    expect(controller.nearMisses, 0);
+  });
+
+  test('late patterns spawn double gates and spark bait deterministically', () {
+    var sawDouble = false;
+    var sawBait = false;
+    for (var seed = 0; seed < 40; seed++) {
+      final controller = GameController(
+        bestScoreStore: InMemoryBestScoreStore(),
+        random: math.Random(seed),
+      );
+      controller.setViewportSize(const Size(300, 600));
+      controller.debugSetCleanDodges(20);
+      controller.update(GameBalance.gateSpawnDelayFor(20) + 0.01);
+      final gates = controller.gates;
+      if (gates.length == 2) {
+        // Either a double gate (single gaps, different lanes) or a bait pair.
+        if (controller.sparks.isEmpty) {
+          sawDouble = true;
+          expect(gates[1].openLanes.length, 1);
+          expect(gates[0].openLanes.length, 1);
+          expect(gates[1].openLanes.first, isNot(gates[0].openLanes.first));
+        } else {
+          sawBait = true;
+          final spark = controller.sparks.single;
+          expect(gates[0].openLanes.length, 2);
+          expect(gates[0].openLanes, contains(spark.lane));
+          expect(gates[1].openLanes.length, 1);
+          expect(gates[1].openLanes, isNot(contains(spark.lane)));
+        }
+        expect(gates[1].yPosition, lessThan(gates[0].yPosition));
+      } else {
+        expect(gates.length, 1);
+        expect(controller.sparks, isEmpty);
+      }
+    }
+    expect(sawDouble, isTrue);
+    expect(sawBait, isTrue);
   });
 }

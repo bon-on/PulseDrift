@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../ads/ad_banner.dart';
 import '../ads/ad_service.dart';
@@ -9,7 +11,14 @@ import '../audio/audio_controller.dart';
 import '../persistence/best_score_store.dart';
 import '../../result_registration.dart';
 import 'game_controller.dart';
+import 'game_input.dart';
 import 'game_painter.dart';
+
+/// Height of the hub navigation bar from web/index.html (--games-nav-height).
+const double webHubBarHeight = 48;
+
+/// Widest the play column grows on desktop; phones use the full width.
+const double maxPlayColumnWidth = 480;
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key, this.enableAds = false});
@@ -83,6 +92,20 @@ class _GameScreenState extends State<GameScreen>
     _wasGameOver = _controller.isGameOver;
   }
 
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final delta = laneDeltaForKey(event.logicalKey);
+    if (delta != null) {
+      _controller.shiftLane(delta);
+      return KeyEventResult.handled;
+    }
+    if (_controller.isGameOver && isRestartKey(event.logicalKey)) {
+      _controller.restart();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   void _onTick(Duration elapsed) {
     final previousTick = _lastTick;
     _lastTick = elapsed;
@@ -101,73 +124,95 @@ class _GameScreenState extends State<GameScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF061019),
-                  Color(0xFF0D2A31),
-                  Color(0xFF130C1E),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _Header(controller: _controller),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final size = Size(
-                            constraints.maxWidth,
-                            constraints.maxHeight,
-                          );
-                          _controller.setViewportSize(size);
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: _onKey,
+        child: Padding(
+          padding: EdgeInsets.only(top: kIsWeb ? webHubBarHeight : 0),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              return DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF061019),
+                      Color(0xFF0D2A31),
+                      Color(0xFF130C1E),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: maxPlayColumnWidth,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            _Header(controller: _controller),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final size = Size(
+                                    constraints.maxWidth,
+                                    constraints.maxHeight,
+                                  );
+                                  _controller.setViewportSize(size);
 
-                          return GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTapDown: (details) => _controller.handlePointerX(
-                              details.localPosition.dx,
-                            ),
-                            onPanStart: (details) => _controller.handlePointerX(
-                              details.localPosition.dx,
-                            ),
-                            onPanUpdate: (details) => _controller
-                                .handlePointerX(details.localPosition.dx),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                CustomPaint(
-                                  painter: GamePainter(controller: _controller),
-                                ),
-                                if (_controller.isGameOver)
-                                  Center(
-                                    child: _GameOverCard(
-                                      controller: _controller,
-                                      onRestart: _controller.restart,
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTapUp: (details) => _controller.shiftLane(
+                                      laneDeltaForTap(
+                                        x: details.localPosition.dx,
+                                        width: size.width,
+                                      ),
                                     ),
-                                  ),
-                              ],
+                                    onPanStart: (details) =>
+                                        _controller.handlePointerX(
+                                          details.localPosition.dx,
+                                        ),
+                                    onPanUpdate: (details) =>
+                                        _controller.handlePointerX(
+                                          details.localPosition.dx,
+                                        ),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        CustomPaint(
+                                          painter: GamePainter(
+                                            controller: _controller,
+                                          ),
+                                        ),
+                                        if (_controller.isGameOver)
+                                          Center(
+                                            child: _GameOverCard(
+                                              controller: _controller,
+                                              onRestart: _controller.restart,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                          );
-                        },
+                            AdBanner(enabled: widget.enableAds),
+                          ],
+                        ),
                       ),
                     ),
-                    AdBanner(enabled: widget.enableAds),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -193,7 +238,7 @@ class _Header extends StatelessWidget {
               ),
               SizedBox(height: 8),
               Text(
-                'Drag across the lanes. Catch the line early and ride the gaps.',
+                'Drag, tap left/right, or use arrow keys / A D. Grab sparks, but watch the next gate.',
                 style: TextStyle(color: Color(0xCCFFFFFF), height: 1.3),
               ),
             ],
@@ -239,7 +284,7 @@ class _GameOverCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Drag sooner across the lanes. Best score is saved automatically.',
+            'Move earlier, and weigh each spark against the next gate. Best score is saved automatically.',
             style: TextStyle(color: Colors.white.withValues(alpha: 0.78)),
           ),
           const SizedBox(height: 18),

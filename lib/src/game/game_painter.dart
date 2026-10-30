@@ -31,7 +31,7 @@ class GamePainter extends CustomPainter {
 
     for (final gate in controller.gates) {
       for (var lane = 0; lane < laneCenters.length; lane++) {
-        if (lane == gate.blockedLane) {
+        if (gate.openLanes.contains(lane)) {
           continue;
         }
 
@@ -73,6 +73,34 @@ class GamePainter extends CustomPainter {
       ..color = const Color(0xFF59FFDB)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
+
+    if (controller.nearMissFlash > 0) {
+      final ring = Paint()
+        ..color = const Color(
+          0xFFFFE066,
+        ).withValues(alpha: (controller.nearMissFlash / 0.6).clamp(0.0, 1.0))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+      canvas.drawCircle(playerCenter, GameBalance.playerRadius + 16, ring);
+      final label = TextPainter(
+        text: TextSpan(
+          text: 'CLOSE +${GameBalance.nearMissBonus.round()}',
+          style: const TextStyle(
+            color: Color(0xFFFFE066),
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      label.paint(
+        canvas,
+        playerCenter.translate(
+          -label.width / 2,
+          -GameBalance.playerRadius - 36,
+        ),
+      );
+    }
 
     canvas.drawCircle(playerCenter, GameBalance.playerRadius + 8, playerGlow);
     canvas.drawCircle(playerCenter, GameBalance.playerRadius, playerFill);

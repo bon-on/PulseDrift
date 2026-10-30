@@ -38,11 +38,20 @@ class GameController extends ChangeNotifier {
   bool _isGameOver = false;
   bool _initialized = false;
   double _gateTimer = 0;
-  double _sparkTimer = 0;
+  double _clock = 0;
+  double _laneChangedAt = -100;
+  int _previousLane = 1;
+  int _nearMisses = 0;
+  double _nearMissFlash = 0;
 
   List<GateState> get gates => List<GateState>.unmodifiable(_gates);
   List<SparkState> get sparks => List<SparkState>.unmodifiable(_sparks);
   int get currentLane => _currentLane;
+  int get nearMisses => _nearMisses;
+
+  /// Seconds left of the near-miss highlight (0 when idle).
+  double get nearMissFlash => _nearMissFlash;
+  int get cleanDodges => _cleanDodges;
   int get score => _score;
   int get bestScore => _bestScore;
   bool get isGameOver => _isGameOver;
@@ -55,6 +64,10 @@ class GameController extends ChangeNotifier {
       : _viewportSize.height * GameBalance.playerAnchorHeightFactor;
   List<double> get laneCenters =>
       GameGeometry.laneCentersForWidth(_viewportSize.width);
+
+  /// Jumps difficulty progression ahead; tests use it to reach late patterns.
+  @visibleForTesting
+  void debugSetCleanDodges(int value) => _cleanDodges = value;
 
   Future<void> initialize() async {
     _bestScore = await _bestScoreStore.loadBestScore();
@@ -77,10 +90,28 @@ class GameController extends ChangeNotifier {
       return;
     }
 
-    _currentLane = GameGeometry.nearestLaneIndex(
-      xPosition: xPosition,
-      width: _viewportSize.width,
+    _setLane(
+      GameGeometry.nearestLaneIndex(
+        xPosition: xPosition,
+        width: _viewportSize.width,
+      ),
     );
+  }
+
+  /// Moves one lane left (-1) or right (+1); used by keyboard and tap input.
+  void shiftLane(int delta) {
+    if (_isGameOver || _viewportSize.isEmpty) {
+      return;
+    }
+    _setLane((_currentLane + delta).clamp(0, GameBalance.laneCount - 1));
+  }
+
+  void _setLane(int lane) {
+    if (lane != _currentLane) {
+      _previousLane = _currentLane;
+      _laneChangedAt = _clock;
+    }
+    _currentLane = lane;
     notifyListeners();
   }
 
@@ -96,17 +127,13 @@ class GameController extends ChangeNotifier {
       return;
     }
 
+    _clock += deltaSeconds;
+    _nearMissFlash = math.max(0, _nearMissFlash - deltaSeconds);
     _gateTimer += deltaSeconds;
-    _sparkTimer += deltaSeconds;
 
     if (_gateTimer >= GameBalance.gateSpawnDelayFor(_cleanDodges)) {
       _gateTimer = 0;
       _spawnGate();
-    }
-
-    if (_sparkTimer >= GameBalance.sparkSpawnDelayFor(_cleanDodges)) {
-      _sparkTimer = 0;
-      _spawnSpark();
     }
 
     _moveWorld(deltaSeconds);
@@ -123,7 +150,11 @@ class GameController extends ChangeNotifier {
     _score = 0;
     _isGameOver = false;
     _gateTimer = 0;
-    _sparkTimer = 0;
+    _clock = 0;
+    _laneChangedAt = -100;
+    _previousLane = 1;
+    _nearMisses = 0;
+    _nearMissFlash = 0;
     _playerVisualX = _viewportSize.isEmpty ? 0 : laneCenters[_currentLane];
     _onRestarted?.call();
     notifyListeners();
@@ -145,7 +176,7 @@ class GameController extends ChangeNotifier {
       gate.yPosition += velocity * deltaSeconds;
     }
     for (final spark in _sparks) {
-      spark.yPosition += (velocity * 0.82) * deltaSeconds;
+      spark.yPosition += velocity * deltaSeconds;
     }
   }
 
@@ -157,10 +188,24 @@ class GameController extends ChangeNotifier {
           (gate.yPosition - playerCenterY).abs() <=
           (GameBalance.playerRadius + (GameBalance.gateHeight / 2));
 
-      if (overlapsPlayer && _currentLane != gate.blockedLane) {
+      if (overlapsPlayer && !gate.openLanes.contains(_currentLane)) {
         _isGameOver = true;
         _onCrash?.call();
         return;
+      }
+
+      if (overlapsPlayer && !gate.entered) {
+        gate.entered = true;
+        // Near miss: the player only reached the open lane at the last moment.
+        final lateSwitch =
+            _clock - _laneChangedAt <= GameBalance.nearMissWindowSeconds &&
+            !gate.openLanes.contains(_previousLane);
+        if (lateSwitch) {
+          _nearMisses += 1;
+          _nearMissFlash = 0.6;
+          _score += GameBalance.nearMissBonus.round();
+          _syncBestScore();
+        }
       }
 
       if (!gate.scored &&
@@ -198,18 +243,47 @@ class GameController extends ChangeNotifier {
   }
 
   void _spawnGate() {
-    _gates.add(
-      GateState(
-        blockedLane: _random.nextInt(GameBalance.laneCount),
-        yPosition: -48,
-      ),
-    );
-  }
+    final pattern = GameBalance.patternFor(_cleanDodges, _random.nextDouble());
+    const startY = -48.0;
+    final allLanes = List<int>.generate(GameBalance.laneCount, (i) => i);
+    final firstOpen = _random.nextInt(GameBalance.laneCount);
 
-  void _spawnSpark() {
-    _sparks.add(
-      SparkState(lane: _random.nextInt(GameBalance.laneCount), yPosition: -88),
-    );
+    switch (pattern) {
+      case GatePattern.single:
+        _gates.add(GateState(openLanes: {firstOpen}, yPosition: startY));
+      case GatePattern.doubleGate:
+        // The second gap is always a different lane, so a lane change is forced.
+        final secondOpen =
+            (firstOpen + 1 + _random.nextInt(GameBalance.laneCount - 1)) %
+            GameBalance.laneCount;
+        _gates.add(GateState(openLanes: {firstOpen}, yPosition: startY));
+        _gates.add(
+          GateState(
+            openLanes: {secondOpen},
+            yPosition: startY - speed * GameBalance.doubleGateGapSeconds,
+          ),
+        );
+        _gateTimer = -GameBalance.doubleGateGapSeconds;
+      case GatePattern.bait:
+        final layout = GameBalance.baitLayoutFor(
+          firstOpen,
+          _random.nextDouble(),
+        );
+        _gates.add(
+          GateState(
+            openLanes: allLanes.where((l) => l != layout.wallLane).toSet(),
+            yPosition: startY,
+          ),
+        );
+        _sparks.add(SparkState(lane: layout.sparkLane, yPosition: startY));
+        _gates.add(
+          GateState(
+            openLanes: {firstOpen},
+            yPosition: startY - speed * GameBalance.baitGateGapSeconds,
+          ),
+        );
+        _gateTimer = -GameBalance.baitGateGapSeconds;
+    }
   }
 
   void _syncBestScore() {
