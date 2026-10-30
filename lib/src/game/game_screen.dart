@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -13,9 +12,6 @@ import '../../result_registration.dart';
 import 'game_controller.dart';
 import 'game_input.dart';
 import 'game_painter.dart';
-
-/// Height of the hub navigation bar from web/index.html (--games-nav-height).
-const double webHubBarHeight = 48;
 
 /// Widest the play column grows on desktop; phones use the full width.
 const double maxPlayColumnWidth = 480;
@@ -127,91 +123,84 @@ class _GameScreenState extends State<GameScreen>
       body: Focus(
         autofocus: true,
         onKeyEvent: _onKey,
-        child: Padding(
-          padding: EdgeInsets.only(top: kIsWeb ? webHubBarHeight : 0),
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              return DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF061019),
-                      Color(0xFF0D2A31),
-                      Color(0xFF130C1E),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF061019),
+                    Color(0xFF0D2A31),
+                    Color(0xFF130C1E),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: SafeArea(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: maxPlayColumnWidth,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            _Header(controller: _controller),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final size = Size(
-                                    constraints.maxWidth,
-                                    constraints.maxHeight,
-                                  );
-                                  _controller.setViewportSize(size);
+              ),
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: maxPlayColumnWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          _Header(controller: _controller),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final size = Size(
+                                  constraints.maxWidth,
+                                  constraints.maxHeight,
+                                );
+                                _controller.setViewportSize(size);
 
-                                  return GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTapUp: (details) => _controller.shiftLane(
-                                      laneDeltaForTap(
-                                        x: details.localPosition.dx,
-                                        width: size.width,
+                                return GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTapUp: (details) => _controller.shiftLane(
+                                    laneDeltaForTap(
+                                      x: details.localPosition.dx,
+                                      width: size.width,
+                                    ),
+                                  ),
+                                  onPanStart: (details) => _controller
+                                      .handlePointerX(details.localPosition.dx),
+                                  onPanUpdate: (details) => _controller
+                                      .handlePointerX(details.localPosition.dx),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      CustomPaint(
+                                        painter: GamePainter(
+                                          controller: _controller,
+                                        ),
                                       ),
-                                    ),
-                                    onPanStart: (details) =>
-                                        _controller.handlePointerX(
-                                          details.localPosition.dx,
-                                        ),
-                                    onPanUpdate: (details) =>
-                                        _controller.handlePointerX(
-                                          details.localPosition.dx,
-                                        ),
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        CustomPaint(
-                                          painter: GamePainter(
+                                      if (_controller.isGameOver)
+                                        Center(
+                                          child: _GameOverCard(
                                             controller: _controller,
+                                            onRestart: _controller.restart,
                                           ),
                                         ),
-                                        if (_controller.isGameOver)
-                                          Center(
-                                            child: _GameOverCard(
-                                              controller: _controller,
-                                              onRestart: _controller.restart,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
-                            AdBanner(enabled: widget.enableAds),
-                          ],
-                        ),
+                          ),
+                          AdBanner(enabled: widget.enableAds),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
