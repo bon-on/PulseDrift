@@ -108,7 +108,7 @@ class MainActivity : FlutterActivity() {
 
     private fun assetDescriptor(asset: String): AssetFileDescriptor {
         val key = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(asset)
-        return assets.openFd("flutter_assets/$key")
+        return assets.openFd(key)
     }
 
     private fun gameAudioAttributes(): AudioAttributes {
