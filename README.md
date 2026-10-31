@@ -20,6 +20,10 @@ Pulse Drift는 iPhone과 Android를 대상으로 Flutter로 재구성한 3레인
 - 최고 점수는 로컬에 저장된다.
 - 첫 실행 때 건너뛸 수 있는 "How to play" 안내 카드가 나오고(`tutorial_seen_v1`로 기억), 헤더의 ? 버튼으로 다시 열 수 있다. 열려 있는 동안 게임은 멈춘다.
 
+## CrazyGames 빌드
+
+`tool/build_crazygames.sh`가 `build/pulse-drift-crazygames.zip`을 만든다(SDK 이벤트, 허브 링크/광고/리더보드 없음). 자세한 내용은 `docs/crazygames.md`.
+
 ## 스펙 기반 작업 절차
 
 1. `harness/manifest.json`을 읽는다.

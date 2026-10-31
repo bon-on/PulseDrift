@@ -8,6 +8,7 @@ import '../ads/ad_banner.dart';
 import '../ads/ad_service.dart';
 import '../audio/audio_controller.dart';
 import '../persistence/best_score_store.dart';
+import '../platform/game_platform.dart';
 import '../../result_registration.dart';
 import 'game_controller.dart';
 import 'game_input.dart';
@@ -21,11 +22,15 @@ class GameScreen extends StatefulWidget {
   const GameScreen({
     super.key,
     this.enableAds = false,
+    this.platform = const NoopGamePlatform(),
     this.tutorialStore = const SharedPrefsTutorialStore(),
     this.bestScoreStore,
   });
 
   final bool enableAds;
+
+  /// Portal hooks (CrazyGames SDK events, ad and leaderboard gates).
+  final GamePlatform platform;
   final TutorialStore tutorialStore;
 
   /// Injectable for tests; defaults to `shared_preferences`.
@@ -48,6 +53,10 @@ class _GameScreenState extends State<GameScreen>
   // True until the stored tutorial flag has been read: the run neither
   // simulates nor accepts input, so nothing happens before the overlay shows.
   bool _tutorialLoading = true;
+  // Whether the platform currently believes gameplay is running.
+  bool _gameplayActive = false;
+
+  bool get _adsEnabled => widget.enableAds && widget.platform.allowsAds;
 
   @override
   void initState() {
@@ -69,18 +78,38 @@ class _GameScreenState extends State<GameScreen>
     final seen = await widget.tutorialStore.isSeen();
     if (!mounted) return;
     setState(() => _tutorialLoading = false);
-    if (!seen) _openTutorial();
+    if (seen) {
+      _syncGameplay();
+    } else {
+      _openTutorial();
+    }
+  }
+
+  /// Reports gameplay start/stop to the platform exactly on transitions:
+  /// playing means no tutorial and a run that has not crashed.
+  void _syncGameplay() {
+    final wantActive =
+        !_tutorialLoading && !_tutorialOpen && !_controller.isGameOver;
+    if (wantActive == _gameplayActive) return;
+    _gameplayActive = wantActive;
+    if (wantActive) {
+      widget.platform.gameplayStart();
+    } else {
+      widget.platform.gameplayStop();
+    }
   }
 
   void _openTutorial() {
     if (_tutorialOpen) return;
     setState(() => _tutorialOpen = true);
+    _syncGameplay();
   }
 
   void _closeTutorial() {
     if (!_tutorialOpen) return;
     unawaited(widget.tutorialStore.markSeen());
     setState(() => _tutorialOpen = false);
+    _syncGameplay();
     _gameFocus.requestFocus();
   }
 
@@ -95,7 +124,10 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _handleGameOverAds() {
-    if (_controller.isGameOver && !_wasGameOver) {
+    _syncGameplay();
+    if (_controller.isGameOver &&
+        !_wasGameOver &&
+        widget.platform.allowsResultRegistration) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           offerResultRegistration(
@@ -108,7 +140,7 @@ class _GameScreenState extends State<GameScreen>
         }
       });
     }
-    if (!widget.enableAds) {
+    if (!_adsEnabled) {
       _wasGameOver = _controller.isGameOver;
       return;
     }
@@ -261,7 +293,7 @@ class _GameScreenState extends State<GameScreen>
                             },
                           ),
                         ),
-                        AdBanner(enabled: widget.enableAds),
+                        AdBanner(enabled: _adsEnabled),
                       ],
                     ),
                   ),
