@@ -79,6 +79,7 @@ class _GameScreenState extends State<GameScreen>
     if (!mounted) return;
     setState(() => _tutorialLoading = false);
     if (seen) {
+      _focusGameAfterFrame();
       _syncGameplay();
     } else {
       _openTutorial();
@@ -110,7 +111,16 @@ class _GameScreenState extends State<GameScreen>
     unawaited(widget.tutorialStore.markSeen());
     setState(() => _tutorialOpen = false);
     _syncGameplay();
-    _gameFocus.requestFocus();
+    _focusGameAfterFrame();
+  }
+
+  /// The game subtree is focusable again only after this frame rebuilds.
+  void _focusGameAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_tutorialOpen && !_tutorialLoading) {
+        _gameFocus.requestFocus();
+      }
+    });
   }
 
   @override
@@ -209,7 +219,11 @@ class _GameScreenState extends State<GameScreen>
             // Ignore touches until the stored tutorial flag has been read.
             child: AbsorbPointer(
               absorbing: _tutorialLoading,
-              child: _buildGame(),
+              // Keep Tab from moving focus behind the open overlay.
+              child: ExcludeFocus(
+                excluding: _tutorialLoading || _tutorialOpen,
+                child: _buildGame(),
+              ),
             ),
           ),
           if (_tutorialOpen)

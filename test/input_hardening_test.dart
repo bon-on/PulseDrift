@@ -111,4 +111,23 @@ void main() {
     expect(game.isGameOver, isTrue);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
   });
+
+  testWidgets('Tab cannot move focus out of the open overlay', (tester) async {
+    final game = await _pump(tester, _SeenTutorial());
+    await tester.tap(find.byTooltip('How to play'));
+    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('How to play'), findsNothing);
+
+    // The game takes keyboard input again after closing.
+    final lane = game.currentLane;
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(game.currentLane, isNot(lane));
+  });
 }
