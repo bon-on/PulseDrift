@@ -3,6 +3,7 @@ id: adr-pulse-drift-pwa-pages
 title: PulseDrift PWA 배포에 Flutter Web과 GitHub Pages 사용
 status: accepted
 related_specs:
+  - feature-pulse-drift-gamepix
   - feature-pulse-drift-pwa-pages
 ---
 

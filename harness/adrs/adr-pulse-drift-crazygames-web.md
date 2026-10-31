@@ -3,6 +3,7 @@ id: adr-pulse-drift-crazygames-web
 title: CrazyGames 배포에 빌드 플래그와 플랫폼 어댑터 사용
 status: accepted
 related_specs:
+  - feature-pulse-drift-gamepix
   - feature-pulse-drift-crazygames
 ---
 

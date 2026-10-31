@@ -3,6 +3,7 @@ id: contract-pulse-drift-crazygames
 title: PulseDrift CrazyGames 웹 배포 계약
 status: active
 related_specs:
+  - feature-pulse-drift-gamepix
   - feature-pulse-drift-crazygames
 evidence_files:
   - docs/crazygames.md
