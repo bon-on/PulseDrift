@@ -46,6 +46,9 @@ class SoundFx {
 
   bool _userMuted = false;
   bool _userTouched = false;
+  // The stored mute choice is read first so a muted player never hears the
+  // loop flash on at launch.
+  bool _loaded = false;
   bool _loopWanted = false;
   bool _loopRunning = false;
   bool _loopStarting = false;
@@ -60,14 +63,18 @@ class SoundFx {
 
   /// Loads the stored choice. A toggle made meanwhile wins.
   Future<void> initialize() async {
-    final stored = await store.loadMuted();
-    if (_userTouched) return;
-    _userMuted = stored;
+    var stored = false;
+    try {
+      stored = await store.loadMuted();
+    } catch (_) {}
+    _loaded = true;
+    if (!_userTouched) _userMuted = stored;
     _applyLoop();
   }
 
   Future<void> setUserMuted(bool value) async {
     _userTouched = true;
+    _loaded = true;
     _userMuted = value;
     _applyLoop();
     await store.saveMuted(value);
@@ -84,7 +91,7 @@ class SoundFx {
   }
 
   void play(Sfx sfx) {
-    if (muted) return;
+    if (!_loaded || muted) return;
     if (_isWeb) {
       _webSound.play(sfx.assetKey, volume: sfx.volume);
       return;
@@ -113,7 +120,7 @@ class SoundFx {
       _stopLoopPlayback();
       return;
     }
-    if (_loopRunning || _loopStarting) return;
+    if (!_loaded || _loopRunning || _loopStarting) return;
     if (_isWeb) {
       if (!_userInteracted) return;
       _loopStarting = true;

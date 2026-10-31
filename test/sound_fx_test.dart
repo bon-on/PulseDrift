@@ -82,9 +82,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('web playback', () {
-    test('plays effects and respects user mute', () {
+    test('plays effects and respects user mute', () async {
       final web = _FakeWeb();
-      final fx = SoundFx(webSound: web, isWeb: true);
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.play(Sfx.pulsePass);
       fx.play(Sfx.crash);
       expect(web.calls, [
@@ -97,14 +98,16 @@ void main() {
       expect(web.calls, isEmpty);
     });
 
-    test('respects platform mute', () {
+    test('respects platform mute', () async {
       final web = _FakeWeb();
       var platformMuted = true;
       final fx = SoundFx(
         webSound: web,
         isWeb: true,
         isPlatformMuted: () => platformMuted,
+        store: _MemoryMuteStore(),
       );
+      await fx.initialize();
       fx.play(Sfx.pulsePass);
       expect(web.calls, isEmpty);
       platformMuted = false;
@@ -114,7 +117,8 @@ void main() {
 
     test('loop waits for the first user input', () async {
       final web = _FakeWeb();
-      final fx = SoundFx(webSound: web, isWeb: true);
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       await _settle();
       expect(web.calls, isEmpty);
@@ -128,7 +132,8 @@ void main() {
 
     test('a refused loop is retried on the next input', () async {
       final web = _FakeWeb()..allowLoop = false;
-      final fx = SoundFx(webSound: web, isWeb: true);
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       fx.onUserInput();
       await _settle();
@@ -141,6 +146,7 @@ void main() {
     test('muting stops the loop and unmuting resumes it', () async {
       final web = _FakeWeb();
       final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       fx.onUserInput();
       await _settle();
@@ -155,7 +161,8 @@ void main() {
 
     test('crash stops the loop; restart starts it again', () async {
       final web = _FakeWeb();
-      final fx = SoundFx(webSound: web, isWeb: true);
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       fx.onUserInput();
       await _settle();
@@ -195,7 +202,8 @@ void main() {
     });
 
     test('keeps the existing method names and honors mute', () async {
-      final fx = SoundFx(isWeb: false);
+      final fx = SoundFx(isWeb: false, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       fx.play(Sfx.pulsePass);
       fx.play(Sfx.crash);
@@ -214,7 +222,8 @@ void main() {
             const MethodChannel('pulse_drift/audio'),
             null,
           );
-      final fx = SoundFx(isWeb: false);
+      final fx = SoundFx(isWeb: false, store: _MemoryMuteStore());
+      await fx.initialize();
       fx.startBackgroundLoop();
       fx.play(Sfx.crash);
       fx.dispose();
@@ -232,7 +241,7 @@ void main() {
       (await SharedPreferences.getInstance()).getBool('sound_muted_v1'),
       isTrue,
     );
-    final fx = SoundFx(isWeb: true, webSound: _FakeWeb());
+    final fx = SoundFx(isWeb: true, webSound: _FakeWeb(), store: store);
     await fx.initialize();
     expect(fx.userMuted, isTrue);
   });
@@ -314,4 +323,48 @@ void main() {
     // The header fits next to the extra button without overflowing.
     expect(tester.takeException(), isNull);
   });
+
+  test('nothing plays before the stored mute is read', () async {
+    final web = _FakeWeb();
+    final gate = Completer<bool>();
+    final store = _GatedStore(gate.future);
+    final fx = SoundFx(webSound: web, isWeb: true, store: store);
+    fx.startBackgroundLoop();
+    fx.onUserInput();
+    fx.play(Sfx.crash);
+    await _settle();
+    expect(web.calls, isEmpty);
+    final init = fx.initialize();
+    gate.complete(true);
+    await init;
+    await _settle();
+    expect(web.calls, isEmpty);
+    expect(fx.userMuted, isTrue);
+  });
+
+  test('a toggle made before the stored value loads wins', () async {
+    final gate = Completer<bool>();
+    final fx = SoundFx(
+      webSound: _FakeWeb(),
+      isWeb: true,
+      store: _GatedStore(gate.future),
+    );
+    final init = fx.initialize();
+    await fx.setUserMuted(false);
+    gate.complete(true);
+    await init;
+    expect(fx.userMuted, isFalse);
+  });
+}
+
+class _GatedStore extends SoundMuteStore {
+  _GatedStore(this.value);
+
+  final Future<bool> value;
+
+  @override
+  Future<bool> loadMuted() => value;
+
+  @override
+  Future<void> saveMuted(bool muted) async {}
 }
