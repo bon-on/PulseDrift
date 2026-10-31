@@ -34,7 +34,7 @@ PulseDrift를 `https://bon-on.github.io/PulseDrift/`에서 실행되는 Flutter 
 ```sh
 flutter test
 flutter build web --release --base-href /PulseDrift/
-node /Users/junsik.park/sources/harness-lab/dist/index.js audit . --format md
+node <harness-lab>/dist/index.js audit . --format md
 ```
 
 ## Evidence References

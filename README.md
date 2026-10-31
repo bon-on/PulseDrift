@@ -4,7 +4,7 @@ Pulse Drift는 iPhone과 Android를 대상으로 Flutter로 재구성한 3레인
 
 ## 저장소 방향
 
-- 기준 저장소 경로: `/Users/junsik.park/sources/games/PulseDrift`
+- 기준 저장소: `bon-on/PulseDrift`
 - 운영 런타임: Flutter 단일 런타임
 - 기능 명세 기준 경로: `harness/specs/`
 - 아키텍처 결정 경로: `harness/adrs/`

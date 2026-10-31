@@ -1,7 +1,7 @@
 # 하네스 계획 보고서
 
 - 제목: PulseDrift를 스펙 기반 Flutter 게임으로 재구축
-- 명세: `/Users/junsik.park/sources/games/PulseDrift/harness/specs/feature-cross-platform-migration.md`
+- 명세: `harness/specs/feature-cross-platform-migration.md`
 - 상태: active
 
 ## 실행 순서
@@ -16,7 +16,7 @@
 
 ## 수용 기준
 
-- 활성 저장소 경로가 `/Users/junsik.park/sources/games/PulseDrift`이고 하네스 산출물이 모두 존재한다.
+- 활성 저장소가 `bon-on/PulseDrift`이고 하네스 산출물이 모두 존재한다.
 - 운영 앱은 공유 게임 로직을 사용하는 Flutter 프로젝트이며 iOS/Android 타깃을 가진다.
 - 플레이어는 드래그와 탭으로 세 레인 사이를 이동할 수 있다.
 - 속도 증가는 공유 밸런스 모델에서 상한 없이 이어진다.
@@ -44,8 +44,8 @@
 
 ## 필요 증빙
 
-- `node /Users/junsik.park/sources/harness-lab/dist/index.js audit /Users/junsik.park/sources/games/PulseDrift --format md`
-- `node /Users/junsik.park/sources/harness-lab/dist/index.js plan /Users/junsik.park/sources/games/PulseDrift/harness/specs/feature-cross-platform-migration.md --format text`
+- `node <harness-lab>/dist/index.js audit . --format md`
+- `node <harness-lab>/dist/index.js plan harness/specs/feature-cross-platform-migration.md --format text`
 - `flutter analyze`
 - `flutter test`
 - `flutter build ios --simulator`

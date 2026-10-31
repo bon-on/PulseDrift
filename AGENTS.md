@@ -16,5 +16,5 @@
 
 기기 설치 주의:
 - iPhone 홈 화면에서 실행할 앱을 설치할 때는 Debug 빌드/`flutter install`을 쓰지 않는다.
-- 항상 `/Users/junsik.park/sources/games/_tools/install_ios_release.sh PulseDrift`로 standalone Release 빌드를 설치한다.
+- 항상 `../_tools/install_ios_release.sh PulseDrift`로 standalone Release 빌드를 설치한다.
 - Debug 빌드를 홈 화면에서 실행하면 `Cannot create a FlutterEngine instance in debug mode without Flutter tooling or Xcode.` 오류로 종료될 수 있다.

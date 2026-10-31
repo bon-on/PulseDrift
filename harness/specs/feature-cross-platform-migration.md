@@ -22,7 +22,7 @@ required_evidence:
 PulseDrift는 현재 iPhone 전용 SwiftUI/SpriteKit 프로젝트에서 시작했으며, 레인 이동도 탭 중심으로 설계되어 있었다. 앞으로는 iPhone과 Android를 함께 지원하는 공유 런타임, 드래그 기반 조작, 그리고 대화 로그가 아닌 버전 관리되는 Markdown 문서를 기준으로 개발이 이어져야 한다.
 
 ## Scope
-- 기준 저장소를 `/Users/junsik.park/sources/games/PulseDrift`로 고정한다.
+- 기준 저장소를 `bon-on/PulseDrift`로 고정한다.
 - 하네스 저장소 키트를 적용하고, 기능 작업을 명세, ADR, 계약 문서에 연결한다.
 - 네이티브 iOS 구현을 대체하는 Flutter 앱을 만들고 iPhone과 Android를 함께 지원한다.
 - 3레인 회피 루프는 유지하되, 조작은 탭 중심에서 드래그 기반 레인 스냅으로 바꾼다.
@@ -30,7 +30,7 @@ PulseDrift는 현재 iPhone 전용 SwiftUI/SpriteKit 프로젝트에서 시작�
 - App Store와 Play Store 출시를 위해 AdMob 배너 광고, 낮은 빈도의 게임오버 전면 광고, 개인정보/스토어 신고 문서를 준비한다.
 
 ## Acceptance Criteria
-- 활성 저장소 경로가 `/Users/junsik.park/sources/games/PulseDrift`이고, 하네스 manifest, rules, templates, spec, ADR, contract를 포함한다.
+- 활성 저장소가 `bon-on/PulseDrift`이고, 하네스 manifest, rules, templates, spec, ADR, contract를 포함한다.
 - 운영 앱은 공유 게임 로직을 사용하는 Flutter 프로젝트이며 iOS/Android 타깃을 모두 가진다.
 - 플레이어는 가로 드래그로 세 레인 중 가장 가까운 레인으로 스냅되며, 짧은 탭도 해당 레인 선택으로 동작한다.
 - 장애물 속도는 기존 빌드보다 느리게 시작하고, 하나의 공유 밸런스 모델에서 증가한다. (속도 상한 정책은 `feature-pulse-drift-pattern-variety`가 대체한다.)
@@ -48,7 +48,7 @@ PulseDrift는 현재 iPhone 전용 SwiftUI/SpriteKit 프로젝트에서 시작�
 - 감지된 프로필 팩이 승인되기 전까지는 저장소 규칙 문서만을 공식 근거로 사용한다.
 
 ## Evidence
-- `node /Users/junsik.park/sources/harness-lab/dist/index.js audit /Users/junsik.park/sources/games/PulseDrift --format md`
+- `node <harness-lab>/dist/index.js audit . --format md`
 - `flutter analyze`
 - `flutter test`
 - `flutter build ios --simulator`

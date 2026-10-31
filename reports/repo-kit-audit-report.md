@@ -1,7 +1,7 @@
 # 하네스 감사 보고서
 
 - 저장소: PulseDrift
-- Manifest: `/Users/junsik.park/sources/games/PulseDrift/harness/manifest.json`
+- Manifest: `harness/manifest.json`
 - 정책 모드: `warn-block-critical`
 - 스택 요약: 스펙 기반 하네스 산출물을 갖춘 Flutter 모바일 게임 저장소
 - 감지된 프로필: 없음
@@ -19,4 +19,4 @@
 
 ## 명령
 
-`node /Users/junsik.park/sources/harness-lab/dist/index.js audit /Users/junsik.park/sources/games/PulseDrift --format md`
+`node <harness-lab>/dist/index.js audit . --format md`

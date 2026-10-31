@@ -47,4 +47,4 @@ required_evidence:
 
 - `flutter test`
 - `flutter build web --release --base-href /PulseDrift/`
-- `node /Users/junsik.park/sources/harness-lab/dist/index.js audit . --format md`
+- `node <harness-lab>/dist/index.js audit . --format md`
