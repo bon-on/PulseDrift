@@ -159,6 +159,35 @@ void main() {
       expect(web.calls, ['startLoop:$_loop:true']);
     });
 
+    test('hiding the app pauses the loop; showing it resumes', () async {
+      final web = _FakeWeb();
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
+      fx.startBackgroundLoop();
+      fx.onUserInput();
+      await _settle();
+      web.calls.clear();
+      fx.setAppVisible(false);
+      expect(web.calls, ['stopLoop:$_loop']);
+      fx.onUserInput();
+      await _settle();
+      expect(web.calls, hasLength(1));
+      fx.setAppVisible(true);
+      await _settle();
+      expect(web.calls, ['stopLoop:$_loop', 'startLoop:$_loop:true']);
+    });
+
+    test('a loop that finishes starting after the app was hidden stops', () async {
+      final web = _FakeWeb();
+      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
+      await fx.initialize();
+      fx.startBackgroundLoop();
+      fx.onUserInput();
+      fx.setAppVisible(false);
+      await _settle();
+      expect(web.calls, ['startLoop:$_loop:true', 'stopLoop:$_loop']);
+    });
+
     test('crash stops the loop; restart starts it again', () async {
       final web = _FakeWeb();
       final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());

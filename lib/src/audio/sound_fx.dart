@@ -54,6 +54,9 @@ class SoundFx {
   bool _loopStarting = false;
   // Browsers only allow audio after a user gesture; the loop waits for one.
   bool _userInteracted = false;
+  // False while the app or browser tab is hidden; the loop must not keep
+  // playing in the background (the game itself freezes there).
+  bool _appVisible = true;
 
   static bool _never() => false;
 
@@ -82,6 +85,13 @@ class SoundFx {
 
   /// Call when the platform mute may have changed.
   void refreshMute() => _applyLoop();
+
+  /// Call when the app or browser tab is hidden or shown again.
+  void setAppVisible(bool visible) {
+    if (_appVisible == visible) return;
+    _appVisible = visible;
+    _applyLoop();
+  }
 
   /// Call on pointer or key input; unlocks web audio for the loop and retries
   /// a loop the browser refused earlier.
@@ -116,7 +126,7 @@ class SoundFx {
   }
 
   void _applyLoop() {
-    if (!_loopWanted || muted) {
+    if (!_loopWanted || muted || !_appVisible) {
       _stopLoopPlayback();
       return;
     }
@@ -129,7 +139,7 @@ class SoundFx {
         if (!ok) return;
         _loopRunning = true;
         // State may have changed while the browser was starting playback.
-        if (!_loopWanted || muted) _stopLoopPlayback();
+        if (!_loopWanted || muted || !_appVisible) _stopLoopPlayback();
       });
       return;
     }

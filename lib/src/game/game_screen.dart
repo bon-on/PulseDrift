@@ -50,6 +50,7 @@ class _GameScreenState extends State<GameScreen>
   late final Ticker _ticker;
   late final GameController _controller;
   late final SoundFx _sound;
+  late final AppLifecycleListener _lifecycle;
   Duration? _lastTick;
   bool _wasGameOver = false;
   int _completedRuns = 0;
@@ -71,6 +72,14 @@ class _GameScreenState extends State<GameScreen>
       store: widget.soundMuteStore,
     );
     widget.platform.addAudioMuteListener(_sound.refreshMute);
+    // Hidden tab or backgrounded app: pause the loop (web reports
+    // visibilitychange as hidden/resumed).
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) => _sound.setAppVisible(
+        state == AppLifecycleState.resumed ||
+            state == AppLifecycleState.inactive,
+      ),
+    );
     _controller = GameController(
       bestScoreStore: widget.bestScoreStore ?? SharedPrefsBestScoreStore(),
       onGateDodged: () => _sound.play(Sfx.pulsePass),
@@ -152,6 +161,7 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _controller.removeListener(_handleGameOverAds);
     _ticker.dispose();
     _gameFocus.dispose();
