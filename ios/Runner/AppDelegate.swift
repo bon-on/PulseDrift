@@ -45,6 +45,9 @@ import UIKit
       case "playPulsePass":
         self.playPulsePass()
         result(nil)
+      case "playCrash":
+        self.playCrash()
+        result(nil)
       case "disposeAudio":
         self.disposeAudio()
         result(nil)
@@ -56,7 +59,7 @@ import UIKit
 
   private func configureAudioSession() {
     do {
-      try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+      try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
       try AVAudioSession.sharedInstance().setActive(true)
     } catch {
     }
@@ -84,14 +87,22 @@ import UIKit
   }
 
   private func playPulsePass() {
+    playEffect(asset: "assets/audio/pulse_pass.wav", volume: 0.78)
+  }
+
+  private func playCrash() {
+    playEffect(asset: "assets/audio/crash.wav", volume: 0.8)
+  }
+
+  private func playEffect(asset: String, volume: Float) {
     configureAudioSession()
-    guard let url = assetURL(for: "assets/audio/pulse_pass.wav") else {
+    guard let url = assetURL(for: asset) else {
       return
     }
 
     do {
       effectsPlayer = try AVAudioPlayer(contentsOf: url)
-      effectsPlayer?.volume = 0.78
+      effectsPlayer?.volume = volume
       effectsPlayer?.prepareToPlay()
       effectsPlayer?.play()
     } catch {

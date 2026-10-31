@@ -4,6 +4,7 @@ title: 첫 번째 공유 Flutter 게임 기반 구축
 status: active
 related_specs:
   - feature-cross-platform-migration
+  - feature-sound-effects
 evidence_files:
   - reports/repo-kit-audit-report.md
 ---

@@ -5,6 +5,7 @@ status: active
 related_specs:
   - feature-pulse-drift-gamepix
   - feature-pulse-drift-crazygames
+  - feature-sound-effects
 evidence_files:
   - docs/crazygames.md
   - reports/pulse-drift-crazygames-verification.md

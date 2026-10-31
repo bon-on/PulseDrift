@@ -17,6 +17,13 @@ abstract class GamePlatform {
 
   void gameplayStop();
 
+  /// Whether the portal asks the game to stay silent (CrazyGames
+  /// `settings.muteAudio`). Combined with the player's own mute toggle.
+  bool get isAudioMuted => false;
+
+  /// Calls [listener] when [isAudioMuted] may have changed.
+  void addAudioMuteListener(void Function() listener) {}
+
   /// Whether ad networks (AdMob) may be used. Portal builds never show ads.
   bool get allowsAds;
 
@@ -33,8 +40,8 @@ class NoopGamePlatform extends GamePlatform {
 
   /// GamePix portal build: SDK-free, no ads, no result upload.
   const NoopGamePlatform.gamePix()
-      : allowsAds = false,
-        allowsResultRegistration = false;
+    : allowsAds = false,
+      allowsResultRegistration = false;
 
   @override
   Future<void> initialize() async {}

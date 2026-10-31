@@ -11,7 +11,11 @@ import 'package:pulse_drift/src/platform/crazygames_platform.dart';
 
 /// Installs a fake `window.CrazyGames.SDK` and records the calls it receives.
 class _FakeSdk {
-  _FakeSdk({this.environment = 'local', this.initResult}) {
+  _FakeSdk({
+    this.environment = 'local',
+    this.initResult,
+    this.withSettings = false,
+  }) {
     final game = JSObject()
       ..setProperty(
         'gameplayStart'.toJS,
@@ -21,6 +25,14 @@ class _FakeSdk {
         'gameplayStop'.toJS,
         (() => calls.add('gameplayStop')).toJS,
       );
+    if (withSettings) {
+      game
+        ..setProperty('settings'.toJS, _settings(muteAudio: false))
+        ..setProperty(
+          'addSettingsChangeListener'.toJS,
+          ((JSFunction listener) => settingsListener = listener).toJS,
+        );
+    }
     final sdk = JSObject()
       ..setProperty('environment'.toJS, environment.toJS)
       ..setProperty('game'.toJS, game)
@@ -36,7 +48,16 @@ class _FakeSdk {
 
   final String environment;
   final Future<void>? initResult;
+  final bool withSettings;
   final List<String> calls = <String>[];
+  JSFunction? settingsListener;
+
+  static JSObject _settings({required bool muteAudio}) =>
+      JSObject()..setProperty('muteAudio'.toJS, muteAudio.toJS);
+
+  void pushSettings({required bool muteAudio}) {
+    settingsListener!.callAsFunction(null, _settings(muteAudio: muteAudio));
+  }
 }
 
 void _removeSdk() => globalContext.delete('CrazyGames'.toJS);
@@ -93,5 +114,31 @@ void main() {
     platform.gameplayStart();
     platform.gameplayStop();
     expect(sdk.calls, <String>['gameplayStart', 'gameplayStop']);
+  });
+
+  test(
+    'settings.muteAudio drives isAudioMuted and notifies listeners',
+    () async {
+      final sdk = _FakeSdk(withSettings: true);
+      final platform = CrazyGamesPlatform();
+      var notified = 0;
+      platform.addAudioMuteListener(() => notified += 1);
+      await platform.initialize();
+      expect(platform.isAudioMuted, isFalse);
+
+      sdk.pushSettings(muteAudio: true);
+      expect(platform.isAudioMuted, isTrue);
+      sdk.pushSettings(muteAudio: false);
+      expect(platform.isAudioMuted, isFalse);
+      expect(notified, 2);
+    },
+  );
+
+  test('an SDK without settings stays audible', () async {
+    _FakeSdk();
+    final platform = CrazyGamesPlatform();
+    await platform.initialize();
+    expect(platform.isAudioMuted, isFalse);
+    platform.gameplayStart();
   });
 }

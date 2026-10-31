@@ -29,7 +29,11 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "playPulsePass" -> {
-                    playEffect("assets/audio/pulse_pass.wav")
+                    playEffect("assets/audio/pulse_pass.wav", 0.78f)
+                    result.success(null)
+                }
+                "playCrash" -> {
+                    playEffect("assets/audio/crash.wav", 0.8f)
                     result.success(null)
                 }
                 "disposeAudio" -> {
@@ -74,7 +78,7 @@ class MainActivity : FlutterActivity() {
         musicPlayer = null
     }
 
-    private fun playEffect(asset: String) {
+    private fun playEffect(asset: String, volume: Float) {
         effectsPlayer?.release()
         effectsPlayer = null
         runCatching {
@@ -87,7 +91,7 @@ class MainActivity : FlutterActivity() {
                 descriptor.length,
             )
             descriptor.close()
-            player.setVolume(0.78f, 0.78f)
+            player.setVolume(volume, volume)
             player.prepare()
             player.setOnCompletionListener {
                 it.release()

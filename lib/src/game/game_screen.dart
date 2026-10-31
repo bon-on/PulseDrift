@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 
 import '../ads/ad_banner.dart';
 import '../ads/ad_service.dart';
-import '../audio/audio_controller.dart';
+import '../audio/sound_fx.dart';
+import '../audio/sound_mute_store.dart';
 import '../persistence/best_score_store.dart';
 import '../platform/game_platform.dart';
 import '../../result_registration.dart';
@@ -25,6 +26,7 @@ class GameScreen extends StatefulWidget {
     this.platform = const NoopGamePlatform(),
     this.tutorialStore = const SharedPrefsTutorialStore(),
     this.bestScoreStore,
+    this.soundMuteStore = const SoundMuteStore(),
   });
 
   final bool enableAds;
@@ -36,6 +38,9 @@ class GameScreen extends StatefulWidget {
   /// Injectable for tests; defaults to `shared_preferences`.
   final BestScoreStore? bestScoreStore;
 
+  /// Persisted user mute choice; tests inject a fake.
+  final SoundMuteStore soundMuteStore;
+
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -44,7 +49,7 @@ class _GameScreenState extends State<GameScreen>
     with SingleTickerProviderStateMixin {
   late final Ticker _ticker;
   late final GameController _controller;
-  late final AudioController _audioController;
+  late final SoundFx _sound;
   Duration? _lastTick;
   bool _wasGameOver = false;
   int _completedRuns = 0;
@@ -61,17 +66,38 @@ class _GameScreenState extends State<GameScreen>
   @override
   void initState() {
     super.initState();
-    _audioController = AudioController();
+    _sound = SoundFx(
+      isPlatformMuted: () => widget.platform.isAudioMuted,
+      store: widget.soundMuteStore,
+    );
+    widget.platform.addAudioMuteListener(_sound.refreshMute);
     _controller = GameController(
       bestScoreStore: widget.bestScoreStore ?? SharedPrefsBestScoreStore(),
-      onGateDodged: () => unawaited(_audioController.playPulsePass()),
-      onCrash: () => unawaited(_audioController.stopBackgroundLoop()),
-      onRestarted: () => unawaited(_audioController.startBackgroundLoop()),
+      onGateDodged: () => _sound.play(Sfx.pulsePass),
+      onCrash: () {
+        _sound.stopBackgroundLoop();
+        _sound.play(Sfx.crash);
+      },
+      onRestarted: _sound.startBackgroundLoop,
     )..addListener(_handleGameOverAds);
     _controller.initialize();
-    unawaited(_audioController.startBackgroundLoop());
+    unawaited(_loadSoundMuted());
+    _sound.startBackgroundLoop();
     _ticker = createTicker(_onTick)..start();
     unawaited(_maybeShowTutorial());
+  }
+
+  Future<void> _loadSoundMuted() async {
+    try {
+      await _sound.initialize();
+    } catch (_) {}
+    if (mounted) setState(() {});
+  }
+
+  void _toggleSound() {
+    unawaited(_sound.setUserMuted(!_sound.userMuted).catchError((Object _) {}));
+    setState(() {});
+    _focusGameAfterFrame();
   }
 
   Future<void> _maybeShowTutorial() async {
@@ -108,6 +134,7 @@ class _GameScreenState extends State<GameScreen>
 
   void _closeTutorial() {
     if (!_tutorialOpen) return;
+    _sound.onUserInput();
     unawaited(widget.tutorialStore.markSeen());
     setState(() => _tutorialOpen = false);
     _syncGameplay();
@@ -129,7 +156,7 @@ class _GameScreenState extends State<GameScreen>
     _ticker.dispose();
     _gameFocus.dispose();
     _controller.dispose();
-    unawaited(_audioController.dispose());
+    _sound.dispose();
     super.dispose();
   }
 
@@ -167,6 +194,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    _sound.onUserInput();
     if (_tutorialLoading || _tutorialOpen) return KeyEventResult.ignored;
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     // Browser/OS shortcuts (Tab, F5, Ctrl/Cmd/Alt combos) stay with the host.
@@ -213,22 +241,28 @@ class _GameScreenState extends State<GameScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            // Ignore touches until the stored tutorial flag has been read.
-            child: AbsorbPointer(
-              absorbing: _tutorialLoading,
-              // Keep Tab from moving focus behind the open overlay.
-              child: ExcludeFocus(
-                excluding: _tutorialLoading || _tutorialOpen,
-                child: _buildGame(),
+      // Any pointer input unlocks web audio (the loop starts after it).
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _sound.onUserInput(),
+        onPointerUp: (_) => _sound.onUserInput(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              // Ignore touches until the stored tutorial flag has been read.
+              child: AbsorbPointer(
+                absorbing: _tutorialLoading,
+                // Keep Tab from moving focus behind the open overlay.
+                child: ExcludeFocus(
+                  excluding: _tutorialLoading || _tutorialOpen,
+                  child: _buildGame(),
+                ),
               ),
             ),
-          ),
-          if (_tutorialOpen)
-            Positioned.fill(child: HowToPlayOverlay(onClose: _closeTutorial)),
-        ],
+            if (_tutorialOpen)
+              Positioned.fill(child: HowToPlayOverlay(onClose: _closeTutorial)),
+          ],
+        ),
       ),
     );
   }
@@ -263,7 +297,12 @@ class _GameScreenState extends State<GameScreen>
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        _Header(controller: _controller, onHelp: _openTutorial),
+                        _Header(
+                          controller: _controller,
+                          onHelp: _openTutorial,
+                          soundMuted: _sound.userMuted,
+                          onToggleSound: _toggleSound,
+                        ),
                         const SizedBox(height: 16),
                         Expanded(
                           child: LayoutBuilder(
@@ -322,10 +361,17 @@ class _GameScreenState extends State<GameScreen>
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.controller, required this.onHelp});
+  const _Header({
+    required this.controller,
+    required this.onHelp,
+    required this.soundMuted,
+    required this.onToggleSound,
+  });
 
   final GameController controller;
   final VoidCallback onHelp;
+  final bool soundMuted;
+  final VoidCallback onToggleSound;
 
   @override
   Widget build(BuildContext context) {
@@ -339,11 +385,15 @@ class _Header extends StatelessWidget {
               Row(
                 children: [
                   const Flexible(
-                    child: Text(
-                      'Pulse Drift',
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Pulse Drift',
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
@@ -352,6 +402,16 @@ class _Header extends StatelessWidget {
                     tooltip: 'How to play',
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.help_outline),
+                  ),
+                  IconButton(
+                    onPressed: onToggleSound,
+                    tooltip: soundMuted ? 'Sound off' : 'Sound on',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      soundMuted
+                          ? Icons.volume_off_rounded
+                          : Icons.volume_up_rounded,
+                    ),
                   ),
                 ],
               ),
