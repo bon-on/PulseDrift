@@ -45,6 +45,9 @@ class _GameScreenState extends State<GameScreen>
   int _completedRuns = 0;
   final FocusNode _gameFocus = FocusNode(debugLabel: 'game');
   bool _tutorialOpen = false;
+  // True until the stored tutorial flag has been read: the run neither
+  // simulates nor accepts input, so nothing happens before the overlay shows.
+  bool _tutorialLoading = true;
 
   @override
   void initState() {
@@ -64,8 +67,9 @@ class _GameScreenState extends State<GameScreen>
 
   Future<void> _maybeShowTutorial() async {
     final seen = await widget.tutorialStore.isSeen();
-    if (!mounted || seen) return;
-    _openTutorial();
+    if (!mounted) return;
+    setState(() => _tutorialLoading = false);
+    if (!seen) _openTutorial();
   }
 
   void _openTutorial() {
@@ -121,14 +125,26 @@ class _GameScreenState extends State<GameScreen>
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (_tutorialOpen) return KeyEventResult.ignored;
+    if (_tutorialLoading || _tutorialOpen) return KeyEventResult.ignored;
     if (event is KeyUpEvent) return KeyEventResult.ignored;
+    // Browser/OS shortcuts (Tab, F5, Ctrl/Cmd/Alt combos) stay with the host.
+    final keyboard = HardwareKeyboard.instance;
+    if (event.logicalKey == LogicalKeyboardKey.tab ||
+        event.logicalKey == LogicalKeyboardKey.f5 ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isAltPressed) {
+      return KeyEventResult.ignored;
+    }
     final delta = laneDeltaForKey(event.logicalKey);
     if (delta != null) {
       _controller.shiftLane(delta);
       return KeyEventResult.handled;
     }
-    if (_controller.isGameOver && isRestartKey(event.logicalKey)) {
+    // A held key must not restart the run right after a crash.
+    if (_controller.isGameOver &&
+        event is! KeyRepeatEvent &&
+        isRestartKey(event.logicalKey)) {
       _controller.restart();
       return KeyEventResult.handled;
     }
@@ -141,7 +157,7 @@ class _GameScreenState extends State<GameScreen>
 
     // No simulation while the tutorial is open; the tick above is still
     // recorded so closing it does not produce a large time jump.
-    if (previousTick == null || _tutorialOpen) {
+    if (previousTick == null || _tutorialLoading || _tutorialOpen) {
       return;
     }
 
@@ -157,7 +173,13 @@ class _GameScreenState extends State<GameScreen>
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          Positioned.fill(child: _buildGame()),
+          Positioned.fill(
+            // Ignore touches until the stored tutorial flag has been read.
+            child: AbsorbPointer(
+              absorbing: _tutorialLoading,
+              child: _buildGame(),
+            ),
+          ),
           if (_tutorialOpen)
             Positioned.fill(child: HowToPlayOverlay(onClose: _closeTutorial)),
         ],

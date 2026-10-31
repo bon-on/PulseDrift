@@ -231,4 +231,17 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('tutorial_seen_v1'), isTrue);
   });
+
+  testWidgets('Ctrl shortcuts are not consumed by the overlay', (tester) async {
+    await _pump(tester, _FakeTutorialStore());
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+    await tester.pump();
+    expect(find.text(howToPlaySteps[0].text), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(find.text(howToPlaySteps[1].text), findsOneWidget);
+  });
 }
