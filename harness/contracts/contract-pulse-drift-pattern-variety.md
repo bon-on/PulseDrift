@@ -4,6 +4,7 @@ title: Deliver capped speed, pattern variety and keyboard/tap input
 status: active
 related_specs:
   - feature-pulse-drift-pattern-variety
+  - feature-how-to-play-tutorial
 evidence_files:
   - reports/pulse-drift-pattern-variety-verification.md
 ---

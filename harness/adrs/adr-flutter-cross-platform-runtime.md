@@ -5,6 +5,7 @@ status: accepted
 related_specs:
   - feature-cross-platform-migration
   - feature-pulse-drift-pattern-variety
+  - feature-how-to-play-tutorial
 ---
 
 # ADR: PulseDrift의 유일한 운영 런타임으로 Flutter를 사용

@@ -12,14 +12,24 @@ import '../../result_registration.dart';
 import 'game_controller.dart';
 import 'game_input.dart';
 import 'game_painter.dart';
+import 'how_to_play.dart';
 
 /// Widest the play column grows on desktop; phones use the full width.
 const double maxPlayColumnWidth = 480;
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, this.enableAds = false});
+  const GameScreen({
+    super.key,
+    this.enableAds = false,
+    this.tutorialStore = const SharedPrefsTutorialStore(),
+    this.bestScoreStore,
+  });
 
   final bool enableAds;
+  final TutorialStore tutorialStore;
+
+  /// Injectable for tests; defaults to `shared_preferences`.
+  final BestScoreStore? bestScoreStore;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -33,13 +43,15 @@ class _GameScreenState extends State<GameScreen>
   Duration? _lastTick;
   bool _wasGameOver = false;
   int _completedRuns = 0;
+  final FocusNode _gameFocus = FocusNode(debugLabel: 'game');
+  bool _tutorialOpen = false;
 
   @override
   void initState() {
     super.initState();
     _audioController = AudioController();
     _controller = GameController(
-      bestScoreStore: SharedPrefsBestScoreStore(),
+      bestScoreStore: widget.bestScoreStore ?? SharedPrefsBestScoreStore(),
       onGateDodged: () => unawaited(_audioController.playPulsePass()),
       onCrash: () => unawaited(_audioController.stopBackgroundLoop()),
       onRestarted: () => unawaited(_audioController.startBackgroundLoop()),
@@ -47,12 +59,32 @@ class _GameScreenState extends State<GameScreen>
     _controller.initialize();
     unawaited(_audioController.startBackgroundLoop());
     _ticker = createTicker(_onTick)..start();
+    unawaited(_maybeShowTutorial());
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    final seen = await widget.tutorialStore.isSeen();
+    if (!mounted || seen) return;
+    _openTutorial();
+  }
+
+  void _openTutorial() {
+    if (_tutorialOpen) return;
+    setState(() => _tutorialOpen = true);
+  }
+
+  void _closeTutorial() {
+    if (!_tutorialOpen) return;
+    unawaited(widget.tutorialStore.markSeen());
+    setState(() => _tutorialOpen = false);
+    _gameFocus.requestFocus();
   }
 
   @override
   void dispose() {
     _controller.removeListener(_handleGameOverAds);
     _ticker.dispose();
+    _gameFocus.dispose();
     _controller.dispose();
     unawaited(_audioController.dispose());
     super.dispose();
@@ -89,6 +121,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (_tutorialOpen) return KeyEventResult.ignored;
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final delta = laneDeltaForKey(event.logicalKey);
     if (delta != null) {
@@ -106,7 +139,9 @@ class _GameScreenState extends State<GameScreen>
     final previousTick = _lastTick;
     _lastTick = elapsed;
 
-    if (previousTick == null) {
+    // No simulation while the tutorial is open; the tick above is still
+    // recorded so closing it does not produce a large time jump.
+    if (previousTick == null || _tutorialOpen) {
       return;
     }
 
@@ -120,113 +155,140 @@ class _GameScreenState extends State<GameScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Focus(
-        autofocus: true,
-        onKeyEvent: _onKey,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF061019),
-                    Color(0xFF0D2A31),
-                    Color(0xFF130C1E),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: maxPlayColumnWidth,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          _Header(controller: _controller),
-                          const SizedBox(height: 16),
-                          Expanded(
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final size = Size(
-                                  constraints.maxWidth,
-                                  constraints.maxHeight,
-                                );
-                                _controller.setViewportSize(size);
+      body: Stack(
+        children: [
+          Positioned.fill(child: _buildGame()),
+          if (_tutorialOpen)
+            Positioned.fill(child: HowToPlayOverlay(onClose: _closeTutorial)),
+        ],
+      ),
+    );
+  }
 
-                                return GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTapUp: (details) => _controller.shiftLane(
-                                    laneDeltaForTap(
-                                      x: details.localPosition.dx,
-                                      width: size.width,
-                                    ),
+  Widget _buildGame() {
+    return Focus(
+      focusNode: _gameFocus,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF061019),
+                  Color(0xFF0D2A31),
+                  Color(0xFF130C1E),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: maxPlayColumnWidth,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        _Header(controller: _controller, onHelp: _openTutorial),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final size = Size(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              );
+                              _controller.setViewportSize(size);
+
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTapUp: (details) => _controller.shiftLane(
+                                  laneDeltaForTap(
+                                    x: details.localPosition.dx,
+                                    width: size.width,
                                   ),
-                                  onPanStart: (details) => _controller
-                                      .handlePointerX(details.localPosition.dx),
-                                  onPanUpdate: (details) => _controller
-                                      .handlePointerX(details.localPosition.dx),
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      CustomPaint(
-                                        painter: GamePainter(
+                                ),
+                                onPanStart: (details) => _controller
+                                    .handlePointerX(details.localPosition.dx),
+                                onPanUpdate: (details) => _controller
+                                    .handlePointerX(details.localPosition.dx),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CustomPaint(
+                                      painter: GamePainter(
+                                        controller: _controller,
+                                      ),
+                                    ),
+                                    if (_controller.isGameOver)
+                                      Center(
+                                        child: _GameOverCard(
                                           controller: _controller,
+                                          onRestart: _controller.restart,
                                         ),
                                       ),
-                                      if (_controller.isGameOver)
-                                        Center(
-                                          child: _GameOverCard(
-                                            controller: _controller,
-                                            onRestart: _controller.restart,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                          AdBanner(enabled: widget.enableAds),
-                        ],
-                      ),
+                        ),
+                        AdBanner(enabled: widget.enableAds),
+                      ],
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.controller});
+  const _Header({required this.controller, required this.onHelp});
 
   final GameController controller;
+  final VoidCallback onHelp;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Pulse Drift',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900),
+              Row(
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'Pulse Drift',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onHelp,
+                    tooltip: 'How to play',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.help_outline),
+                  ),
+                ],
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'Drag, tap left/right, or use arrow keys / A D. Grab sparks, but watch the next gate.',
                 style: TextStyle(color: Color(0xCCFFFFFF), height: 1.3),
               ),
