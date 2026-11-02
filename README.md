@@ -30,7 +30,7 @@ Pulse Drift는 iPhone과 Android를 대상으로 Flutter로 재구성한 3레인
 
 ## 소리
 
-- `assets/audio/pulse_pass.wav`, `background_loop.wav`는 이 프로젝트를 위해 생성한 파일이다. `crash.wav`는 `tool/generate_sounds.py`(Python 3 표준 라이브러리만, 고정 시드)로 만든다. 서드파티 오디오는 없다. 다시 만들려면 `python3 tool/generate_sounds.py`를 실행한다.
+- `assets/audio/pulse_pass.wav`는 이 프로젝트를 위해 생성한 파일이다. `crash.wav`, 니어미스/스파크/배수/미션/레벨 업 효과음, 신스웨이브 배경음악 `music_loop.wav`(120 bpm, 16 kHz 모노, 끊김 없는 16초 루프)는 `tool/generate_sounds.py`(Python 3 표준 라이브러리만, 고정 시드)로 만든다. 서드파티 오디오는 없다. 다시 만들려면 `python3 tool/generate_sounds.py`를 실행한다.
 - 웹(Pages, CrazyGames, GamePix)과 iOS/Android 모두에서 재생된다. 브라우저 정책 때문에 배경 루프는 첫 탭/키 입력 뒤에 시작한다.
 - 헤더의 스피커 버튼(? 옆)으로 끄고 켠다. 선택은 `shared_preferences`의 `sound_muted_v1`에 저장되고, CrazyGames 플랫폼 음소거와 함께 적용된다. iOS 오디오 세션은 `.ambient`다(무음 스위치를 따르고 다른 앱의 음악을 끊지 않는다).
 

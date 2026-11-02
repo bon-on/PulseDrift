@@ -27,15 +27,16 @@ session (`.playback`) ignores the silent switch and interrupts the user's music.
 ## Scope
 - `lib/src/audio/sound_fx.dart` (`SoundFx`) replaces `AudioController`. It
   plays `pulse_pass` when a gate is dodged and `crash` when the run ends, and
-  runs the `background_loop`.
+  runs the music loop (`music_loop.wav` since `feature-retention-polish`,
+  which also adds near-miss, spark, multiplier, mission and level-up effects).
 - Web: HTML `Audio` per asset (`web_sound_web.dart`, conditional import with a
   stub). Browser autoplay rules: the loop only starts after the first user
   input (pointer down/up, key, or closing the tutorial) and is retried on later
   input if the browser refused it. Effects reset `currentTime` and ignore
   `play()` rejections.
-- Native: the `pulse_drift/audio` MethodChannel keeps its method names
-  (`startBackgroundLoop`, `stopBackgroundLoop`, `playPulsePass`,
-  `disposeAudio`) and adds `playCrash`. iOS uses audio session `.ambient`.
+- Native: the `pulse_drift/audio` MethodChannel takes asset names
+  (`play` and `startLoop` with `asset`/`volume`, `stopLoop`, `disposeAudio`;
+  generalized by `feature-retention-polish`). iOS uses audio session `.ambient`.
   Missing plugin or platform exceptions are swallowed.
 - Mute: a sound icon button next to "?" (`Icons.volume_up_rounded` /
   `Icons.volume_off_rounded`, tooltip "Sound on" / "Sound off") stores
@@ -50,13 +51,13 @@ session (`.playback`) ignores the silent switch and interrupts the user's music.
   a press, and adds no keyboard shortcut.
 - Sounds are played from `GameScreen` callbacks (gate dodged, crash, restart),
   never per frame. No sound for the tutorial card.
-- Assets: `pulse_pass.wav` and `background_loop.wav` were generated for the
-  project earlier; `crash.wav` is produced by `tool/generate_sounds.py`
+- Assets: `pulse_pass.wav` was generated for the project earlier; `crash.wav`
+  and the other effects and the music loop are produced by `tool/generate_sounds.py`
   (stdlib only, fixed seed, deterministic). No third-party audio.
 
 ## Acceptance Criteria
 - Web builds request `pulse_pass.wav` on a dodged gate, `crash.wav` on crash
-  and loop `background_loop.wav` after the first user input; nothing plays when
+  and loop `music_loop.wav` after the first user input; nothing plays when
   muted.
 - The toggle flips icon and tooltip, persists `sound_muted_v1`, and stops or
   resumes the loop.

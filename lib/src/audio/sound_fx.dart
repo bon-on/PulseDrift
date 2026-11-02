@@ -6,20 +6,24 @@ import 'web_sound_stub.dart' if (dart.library.js_interop) 'web_sound_web.dart';
 
 /// One-shot sound effects. Each maps to `assets/audio/<name>.wav`.
 enum Sfx {
-  pulsePass('pulse_pass', 'playPulsePass', 0.78),
-  crash('crash', 'playCrash', 0.8);
+  pulsePass('pulse_pass', 0.78),
+  crash('crash', 0.8),
+  nearMiss('near_miss', 0.7),
+  spark('spark', 0.62),
+  multiplier('multiplier', 0.5),
+  mission('mission', 0.6),
+  levelUp('level_up', 0.66);
 
-  const Sfx(this.fileName, this.nativeMethod, this.volume);
+  const Sfx(this.fileName, this.volume);
 
   final String fileName;
-  final String nativeMethod;
   final double volume;
 
   String get assetKey => 'assets/audio/$fileName.wav';
 }
 
-const String backgroundLoopAsset = 'assets/audio/background_loop.wav';
-const double _loopVolume = 0.28;
+const String backgroundLoopAsset = 'assets/audio/music_loop.wav';
+const double _loopVolume = 0.42;
 
 /// Plays effects and the background loop on web and native shells.
 ///
@@ -106,7 +110,7 @@ class SoundFx {
       _webSound.play(sfx.assetKey, volume: sfx.volume);
       return;
     }
-    _invoke(sfx.nativeMethod);
+    _invoke('play', {'asset': sfx.assetKey, 'volume': sfx.volume});
   }
 
   void startBackgroundLoop() {
@@ -144,7 +148,7 @@ class SoundFx {
       return;
     }
     _loopRunning = true;
-    _invoke('startBackgroundLoop');
+    _invoke('startLoop', {'asset': backgroundLoopAsset, 'volume': _loopVolume});
   }
 
   void _stopLoopPlayback() {
@@ -153,13 +157,13 @@ class SoundFx {
     if (_isWeb) {
       _webSound.stopLoop(backgroundLoopAsset);
     } else {
-      _invoke('stopBackgroundLoop');
+      _invoke('stopLoop');
     }
   }
 
-  void _invoke(String method) {
+  void _invoke(String method, [Map<String, Object>? arguments]) {
     try {
-      _channel.invokeMethod<void>(method).catchError((Object _) {});
+      _channel.invokeMethod<void>(method, arguments).catchError((Object _) {});
     } catch (_) {
       // Audio is optional where the native channel is unavailable.
     }

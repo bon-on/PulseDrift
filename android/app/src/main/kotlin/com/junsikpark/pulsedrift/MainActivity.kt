@@ -1,6 +1,5 @@
 package com.junsikpark.pulsedrift
 
-import android.content.res.AssetFileDescriptor
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import io.flutter.FlutterInjector
@@ -10,7 +9,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var musicPlayer: MediaPlayer? = null
-    private var effectsPlayer: MediaPlayer? = null
+    private val effectPlayers = mutableSetOf<MediaPlayer>()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -20,20 +19,24 @@ class MainActivity : FlutterActivity() {
             "pulse_drift/audio",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "startBackgroundLoop" -> {
-                    startBackgroundLoop()
+                "play" -> {
+                    val asset = call.argument<String>("asset")
+                    val volume = call.argument<Double>("volume") ?: 1.0
+                    if (asset != null) {
+                        playEffect(asset, volume.toFloat())
+                    }
                     result.success(null)
                 }
-                "stopBackgroundLoop" -> {
-                    stopBackgroundLoop()
+                "startLoop" -> {
+                    val asset = call.argument<String>("asset")
+                    val volume = call.argument<Double>("volume") ?: 1.0
+                    if (asset != null) {
+                        startLoop(asset, volume.toFloat())
+                    }
                     result.success(null)
                 }
-                "playPulsePass" -> {
-                    playEffect("assets/audio/pulse_pass.wav", 0.78f)
-                    result.success(null)
-                }
-                "playCrash" -> {
-                    playEffect("assets/audio/crash.wav", 0.8f)
+                "stopLoop" -> {
+                    stopLoop()
                     result.success(null)
                 }
                 "disposeAudio" -> {
@@ -50,21 +53,53 @@ class MainActivity : FlutterActivity() {
         super.onDestroy()
     }
 
-    private fun startBackgroundLoop() {
-        stopBackgroundLoop()
-        runCatching {
-            val descriptor = assetDescriptor("assets/audio/background_loop.wav")
-            val player = MediaPlayer()
-            player.setAudioAttributes(gameAudioAttributes())
-            player.setDataSource(
-                descriptor.fileDescriptor,
-                descriptor.startOffset,
-                descriptor.length,
+    // Releases the player and closes the descriptor if any step fails, so a
+    // broken asset never leaks a MediaPlayer or a file handle.
+    private fun openPlayer(asset: String, contentType: Int): MediaPlayer {
+        val key = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(asset)
+        val player = MediaPlayer()
+        try {
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(contentType)
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .build(),
             )
-            descriptor.close()
-            player.isLooping = true
-            player.setVolume(0.28f, 0.28f)
+            assets.openFd(key).use { descriptor ->
+                player.setDataSource(
+                    descriptor.fileDescriptor,
+                    descriptor.startOffset,
+                    descriptor.length,
+                )
+            }
             player.prepare()
+            return player
+        } catch (error: Exception) {
+            player.release()
+            throw error
+        }
+    }
+
+    // Effects may overlap; each player releases itself when done.
+    private fun playEffect(asset: String, volume: Float) {
+        runCatching {
+            val player = openPlayer(asset, AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            player.setVolume(volume, volume)
+            player.setOnCompletionListener {
+                it.release()
+                effectPlayers.remove(it)
+            }
+            effectPlayers.add(player)
+            player.start()
+        }
+    }
+
+    private fun startLoop(asset: String, volume: Float) {
+        stopLoop()
+        runCatching {
+            val player = openPlayer(asset, AudioAttributes.CONTENT_TYPE_MUSIC)
+            player.isLooping = true
+            player.setVolume(volume, volume)
             musicPlayer = player
             player.start()
         }.onFailure {
@@ -72,55 +107,15 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun stopBackgroundLoop() {
-        musicPlayer?.stop()
+    private fun stopLoop() {
+        runCatching { musicPlayer?.stop() }
         musicPlayer?.release()
         musicPlayer = null
     }
 
-    private fun playEffect(asset: String, volume: Float) {
-        effectsPlayer?.release()
-        effectsPlayer = null
-        runCatching {
-            val descriptor = assetDescriptor(asset)
-            val player = MediaPlayer()
-            player.setAudioAttributes(gameAudioAttributes())
-            player.setDataSource(
-                descriptor.fileDescriptor,
-                descriptor.startOffset,
-                descriptor.length,
-            )
-            descriptor.close()
-            player.setVolume(volume, volume)
-            player.prepare()
-            player.setOnCompletionListener {
-                it.release()
-                if (effectsPlayer === it) {
-                    effectsPlayer = null
-                }
-            }
-            effectsPlayer = player
-            player.start()
-        }.onFailure {
-            effectsPlayer = null
-        }
-    }
-
-    private fun assetDescriptor(asset: String): AssetFileDescriptor {
-        val key = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(asset)
-        return assets.openFd(key)
-    }
-
-    private fun gameAudioAttributes(): AudioAttributes {
-        return AudioAttributes.Builder()
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .build()
-    }
-
     private fun disposeAudio() {
-        stopBackgroundLoop()
-        effectsPlayer?.release()
-        effectsPlayer = null
+        stopLoop()
+        effectPlayers.forEach { it.release() }
+        effectPlayers.clear()
     }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -74,7 +75,7 @@ class _ZeroBest implements BestScoreStore {
   Future<void> saveBestScore(int score) async {}
 }
 
-const _loop = 'assets/audio/background_loop.wav';
+const _loop = 'assets/audio/music_loop.wav';
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
@@ -177,16 +178,23 @@ void main() {
       expect(web.calls, ['stopLoop:$_loop', 'startLoop:$_loop:true']);
     });
 
-    test('a loop that finishes starting after the app was hidden stops', () async {
-      final web = _FakeWeb();
-      final fx = SoundFx(webSound: web, isWeb: true, store: _MemoryMuteStore());
-      await fx.initialize();
-      fx.startBackgroundLoop();
-      fx.onUserInput();
-      fx.setAppVisible(false);
-      await _settle();
-      expect(web.calls, ['startLoop:$_loop:true', 'stopLoop:$_loop']);
-    });
+    test(
+      'a loop that finishes starting after the app was hidden stops',
+      () async {
+        final web = _FakeWeb();
+        final fx = SoundFx(
+          webSound: web,
+          isWeb: true,
+          store: _MemoryMuteStore(),
+        );
+        await fx.initialize();
+        fx.startBackgroundLoop();
+        fx.onUserInput();
+        fx.setAppVisible(false);
+        await _settle();
+        expect(web.calls, ['startLoop:$_loop:true', 'stopLoop:$_loop']);
+      },
+    );
 
     test('crash stops the loop; restart starts it again', () async {
       final web = _FakeWeb();
@@ -210,14 +218,17 @@ void main() {
 
   group('native playback', () {
     late List<String> calls;
+    late List<Object?> args;
 
     setUp(() {
       calls = <String>[];
+      args = <Object?>[];
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(const MethodChannel('pulse_drift/audio'), (
             call,
           ) async {
             calls.add(call.method);
+            args.add(call.arguments);
             return null;
           });
     });
@@ -230,19 +241,22 @@ void main() {
           );
     });
 
-    test('keeps the existing method names and honors mute', () async {
+    test('passes asset names to the native channel and honors mute', () async {
       final fx = SoundFx(isWeb: false, store: _MemoryMuteStore());
       await fx.initialize();
       fx.startBackgroundLoop();
       fx.play(Sfx.pulsePass);
       fx.play(Sfx.crash);
       await _settle();
-      expect(calls, ['startBackgroundLoop', 'playPulsePass', 'playCrash']);
+      expect(calls, ['startLoop', 'play', 'play']);
+      expect(args[0], {'asset': _loop, 'volume': 0.42});
+      expect(args[1], {'asset': 'assets/audio/pulse_pass.wav', 'volume': 0.78});
+      expect(args[2], {'asset': 'assets/audio/crash.wav', 'volume': 0.8});
       calls.clear();
       await fx.setUserMuted(true);
       fx.play(Sfx.pulsePass);
       await _settle();
-      expect(calls, ['stopBackgroundLoop']);
+      expect(calls, ['stopLoop']);
     });
 
     test('a missing native channel is swallowed', () async {
@@ -288,6 +302,13 @@ void main() {
       expect(File(path).existsSync(), isTrue, reason: path);
     }
     expect(File('assets/audio/crash.wav').lengthSync(), lessThan(40 * 1024));
+    // Music: 16 kHz mono 16-bit, under 1 MB.
+    final music = File(backgroundLoopAsset).readAsBytesSync();
+    expect(music.length, lessThan(1024 * 1024));
+    final header = ByteData.sublistView(music, 0, 44);
+    expect(header.getUint16(22, Endian.little), 1);
+    expect(header.getUint32(24, Endian.little), 16000);
+    expect(header.getUint16(34, Endian.little), 16);
   });
 
   testWidgets('toggle flips icon, persists and follows platform mute', (
@@ -328,7 +349,7 @@ void main() {
 
     expect(find.byIcon(Icons.volume_up_rounded), findsOneWidget);
     expect(find.byTooltip('Sound on'), findsOneWidget);
-    expect(calls, contains('startBackgroundLoop'));
+    expect(calls, contains('startLoop'));
 
     calls.clear();
     await tester.tap(find.byIcon(Icons.volume_up_rounded));
@@ -336,19 +357,19 @@ void main() {
     expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
     expect(find.byTooltip('Sound off'), findsOneWidget);
     expect(store.muted, isTrue);
-    expect(calls, ['stopBackgroundLoop']);
+    expect(calls, ['stopLoop']);
 
     calls.clear();
     await tester.tap(find.byIcon(Icons.volume_off_rounded));
     await tester.pump();
     expect(store.muted, isFalse);
-    expect(calls, ['startBackgroundLoop']);
+    expect(calls, ['startLoop']);
 
     calls.clear();
     platform.platformMuted = true;
     platform.listener!();
     await tester.pump();
-    expect(calls, ['stopBackgroundLoop']);
+    expect(calls, ['stopLoop']);
     // The header fits next to the extra button without overflowing.
     expect(tester.takeException(), isNull);
   });

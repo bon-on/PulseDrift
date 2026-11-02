@@ -5,13 +5,37 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var musicPlayer: AVAudioPlayer?
-  private var effectsPlayer: AVAudioPlayer?
+  private var effectPlayers: [AVAudioPlayer] = []
+  // True while the music loop should be audible (startLoop until stopLoop),
+  // so it can resume after a call or Siri interrupted the audio session.
+  private var musicWanted = false
+  private var interruptionObserver: NSObjectProtocol?
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    interruptionObserver = NotificationCenter.default.addObserver(
+      forName: AVAudioSession.interruptionNotification,
+      object: AVAudioSession.sharedInstance(),
+      queue: .main
+    ) { [weak self] notification in
+      self?.handleInterruption(notification)
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func handleInterruption(_ notification: Notification) {
+    guard
+      let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+      let type = AVAudioSession.InterruptionType(rawValue: raw)
+    else {
+      return
+    }
+    if type == .ended, musicWanted, let player = musicPlayer, !player.isPlaying {
+      configureAudioSession()
+      player.play()
+    }
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
@@ -35,18 +59,21 @@ import UIKit
         return
       }
 
+      let args = call.arguments as? [String: Any]
+      let volume = Float(args?["volume"] as? Double ?? 1.0)
       switch call.method {
-      case "startBackgroundLoop":
-        self.startBackgroundLoop()
+      case "play":
+        if let asset = args?["asset"] as? String {
+          self.playEffect(asset: asset, volume: volume)
+        }
         result(nil)
-      case "stopBackgroundLoop":
-        self.stopBackgroundLoop()
+      case "startLoop":
+        if let asset = args?["asset"] as? String {
+          self.startLoop(asset: asset, volume: volume)
+        }
         result(nil)
-      case "playPulsePass":
-        self.playPulsePass()
-        result(nil)
-      case "playCrash":
-        self.playCrash()
+      case "stopLoop":
+        self.stopLoop()
         result(nil)
       case "disposeAudio":
         self.disposeAudio()
@@ -65,54 +92,54 @@ import UIKit
     }
   }
 
-  private func startBackgroundLoop() {
+  // Effects may overlap, so finished players are pruned and the rest are
+  // kept alive until they stop.
+  private func playEffect(asset: String, volume: Float) {
     configureAudioSession()
-    guard let url = assetURL(for: "assets/audio/background_loop.wav") else {
+    effectPlayers.removeAll { !$0.isPlaying }
+    guard let url = assetURL(for: asset) else {
       return
     }
 
     do {
-      musicPlayer = try AVAudioPlayer(contentsOf: url)
-      musicPlayer?.numberOfLoops = -1
-      musicPlayer?.volume = 0.28
-      musicPlayer?.prepareToPlay()
-      musicPlayer?.play()
+      let player = try AVAudioPlayer(contentsOf: url)
+      player.volume = volume
+      player.prepareToPlay()
+      player.play()
+      effectPlayers.append(player)
     } catch {
     }
   }
 
-  private func stopBackgroundLoop() {
-    musicPlayer?.stop()
-    musicPlayer = nil
-  }
-
-  private func playPulsePass() {
-    playEffect(asset: "assets/audio/pulse_pass.wav", volume: 0.78)
-  }
-
-  private func playCrash() {
-    playEffect(asset: "assets/audio/crash.wav", volume: 0.8)
-  }
-
-  private func playEffect(asset: String, volume: Float) {
+  private func startLoop(asset: String, volume: Float) {
+    stopLoop()
     configureAudioSession()
     guard let url = assetURL(for: asset) else {
       return
     }
 
     do {
-      effectsPlayer = try AVAudioPlayer(contentsOf: url)
-      effectsPlayer?.volume = volume
-      effectsPlayer?.prepareToPlay()
-      effectsPlayer?.play()
+      let player = try AVAudioPlayer(contentsOf: url)
+      player.numberOfLoops = -1
+      player.volume = volume
+      player.prepareToPlay()
+      player.play()
+      musicPlayer = player
+      musicWanted = true
     } catch {
     }
   }
 
+  private func stopLoop() {
+    musicWanted = false
+    musicPlayer?.stop()
+    musicPlayer = nil
+  }
+
   private func disposeAudio() {
-    stopBackgroundLoop()
-    effectsPlayer?.stop()
-    effectsPlayer = nil
+    stopLoop()
+    effectPlayers.forEach { $0.stop() }
+    effectPlayers.removeAll()
   }
 
   private func assetURL(for asset: String) -> URL? {
