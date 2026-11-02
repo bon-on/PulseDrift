@@ -100,7 +100,8 @@ void main() {
   ) async {
     final game = await _pump(tester, _SeenTutorial());
 
-    // The key is already held down when the run crashes.
+    // The key is already held down when the run crashes (its press also
+    // left the ready card).
     await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
     for (var i = 0; i < 2400 && !game.isGameOver; i++) {
       await tester.pump(const Duration(milliseconds: 50));

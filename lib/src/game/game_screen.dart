@@ -61,6 +61,9 @@ class _GameScreenState extends State<GameScreen>
   bool _tutorialLoading = true;
   // Whether the platform currently believes gameplay is running.
   bool _gameplayActive = false;
+  // False on the ready card: the first run waits for the player's first tap
+  // or key press instead of starting the moment the page loads.
+  bool _runStarted = false;
 
   bool get _adsEnabled => widget.enableAds && widget.platform.allowsAds;
 
@@ -122,10 +125,13 @@ class _GameScreenState extends State<GameScreen>
   }
 
   /// Reports gameplay start/stop to the platform exactly on transitions:
-  /// playing means no tutorial and a run that has not crashed.
+  /// playing means a started run, no tutorial and no crash.
   void _syncGameplay() {
     final wantActive =
-        !_tutorialLoading && !_tutorialOpen && !_controller.isGameOver;
+        _runStarted &&
+        !_tutorialLoading &&
+        !_tutorialOpen &&
+        !_controller.isGameOver;
     if (wantActive == _gameplayActive) return;
     _gameplayActive = wantActive;
     if (wantActive) {
@@ -133,6 +139,30 @@ class _GameScreenState extends State<GameScreen>
     } else {
       widget.platform.gameplayStop();
     }
+  }
+
+  /// Leaves the ready card on the player's first input. Returns whether the
+  /// run started now (false if it was already running or input is blocked).
+  bool _startRun() {
+    if (_runStarted || _tutorialLoading || _tutorialOpen) return false;
+    setState(() => _runStarted = true);
+    // Drop the time spent on the ready card so the first step stays small.
+    _lastTick = null;
+    _syncGameplay();
+    return true;
+  }
+
+  void _onPlayfieldTap(TapUpDetails details, Size size) {
+    // The first tap only starts the run; later taps shift lanes.
+    if (_startRun()) return;
+    _controller.shiftLane(
+      laneDeltaForTap(x: details.localPosition.dx, width: size.width),
+    );
+  }
+
+  void _onPlayfieldDrag(double x) {
+    _startRun();
+    _controller.handlePointerX(x);
   }
 
   void _openTutorial() {
@@ -172,8 +202,10 @@ class _GameScreenState extends State<GameScreen>
 
   void _handleGameOverAds() {
     _syncGameplay();
+    // A 0-point run has nothing worth submitting.
     if (_controller.isGameOver &&
         !_wasGameOver &&
+        _controller.score > 0 &&
         widget.platform.allowsResultRegistration) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -218,8 +250,17 @@ class _GameScreenState extends State<GameScreen>
     }
     final delta = laneDeltaForKey(event.logicalKey);
     if (delta != null) {
+      // A lane key on the ready card starts the run and moves at once.
+      _startRun();
       _controller.shiftLane(delta);
       return KeyEventResult.handled;
+    }
+    if (!_runStarted) {
+      if (event is! KeyRepeatEvent && isRestartKey(event.logicalKey)) {
+        _startRun();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
     }
     // A held key must not restart the run right after a crash.
     if (_controller.isGameOver &&
@@ -237,7 +278,10 @@ class _GameScreenState extends State<GameScreen>
 
     // No simulation while the tutorial is open; the tick above is still
     // recorded so closing it does not produce a large time jump.
-    if (previousTick == null || _tutorialLoading || _tutorialOpen) {
+    if (previousTick == null ||
+        !_runStarted ||
+        _tutorialLoading ||
+        _tutorialOpen) {
       return;
     }
 
@@ -325,16 +369,12 @@ class _GameScreenState extends State<GameScreen>
 
                               return GestureDetector(
                                 behavior: HitTestBehavior.opaque,
-                                onTapUp: (details) => _controller.shiftLane(
-                                  laneDeltaForTap(
-                                    x: details.localPosition.dx,
-                                    width: size.width,
-                                  ),
-                                ),
-                                onPanStart: (details) => _controller
-                                    .handlePointerX(details.localPosition.dx),
-                                onPanUpdate: (details) => _controller
-                                    .handlePointerX(details.localPosition.dx),
+                                onTapUp: (details) =>
+                                    _onPlayfieldTap(details, size),
+                                onPanStart: (details) =>
+                                    _onPlayfieldDrag(details.localPosition.dx),
+                                onPanUpdate: (details) =>
+                                    _onPlayfieldDrag(details.localPosition.dx),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -343,6 +383,10 @@ class _GameScreenState extends State<GameScreen>
                                         controller: _controller,
                                       ),
                                     ),
+                                    if (!_runStarted && !_tutorialLoading)
+                                      const IgnorePointer(
+                                        child: Center(child: _ReadyCard()),
+                                      ),
                                     if (_controller.isGameOver)
                                       Center(
                                         child: _GameOverCard(
@@ -443,6 +487,40 @@ class _Header extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Shown before the first run: nothing moves until the player taps or
+/// presses a key.
+class _ReadyCard extends StatelessWidget {
+  const _ReadyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 320),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xE6182129),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Ready?',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Tap / press Space to start',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xCCFFFFFF)),
+          ),
+        ],
+      ),
     );
   }
 }

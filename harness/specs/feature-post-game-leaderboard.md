@@ -18,13 +18,13 @@ required_evidence:
 Players should register a trustworthy game-produced result without typing the result themselves.
 
 ## Scope
-- After a completed run, ask whether to register the result.
+- After a completed run with a score above 0, ask whether to register the result.
 - If accepted, ask only for a 1-20 character player name.
 - Submit pulse-drift using metric score; ranking uses highest score.
 - Keep gameplay available if the network is unavailable or registration is declined.
 
 ## Acceptance Criteria
-- The prompt appears once per completed run.
+- The prompt appears once per completed run, and only when the run scored more than 0 points.
 - Declining or failing submission never blocks restart or continued play.
 - The submitted numeric result comes from game state, not player input.
 - Blank or oversized names are rejected.

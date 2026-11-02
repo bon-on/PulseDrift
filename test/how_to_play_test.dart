@@ -186,6 +186,13 @@ void main() {
     // Closing must not apply the 4 s spent reading as one huge time step.
     await tester.pump(const Duration(milliseconds: 16));
     expect(game.gates, isEmpty);
+    // The ready card holds the run until the first input.
+    await _runFor(tester, const Duration(seconds: 2));
+    expect(game.gates, isEmpty);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(game.gates, isEmpty);
 
     await _runFor(tester, const Duration(milliseconds: 1600));
     expect(game.gates, isNotEmpty);

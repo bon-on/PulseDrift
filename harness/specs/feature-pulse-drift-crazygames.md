@@ -24,7 +24,7 @@ PulseDrift 웹 빌드는 GitHub Pages에만 배포된다. CrazyGames 포털에 �
 
 - `--dart-define=CRAZYGAMES=true`로 빌드한 웹 번들에서만 CrazyGames 어댑터(`dart:js_interop`)를 쓴다. 플래그가 없으면 no-op 플랫폼이라 GitHub Pages, iOS, Android 동작은 그대로다.
 - SDK 이벤트(전환 시에만, 중복 없음):
-  - `gameplayStart`: 저장된 튜토리얼 플래그를 읽었고, "How to play" 오버레이가 닫혀 있고, 런이 진행 중일 때. 첫 실행이면 오버레이를 닫은 뒤에 처음 호출한다.
+  - `gameplayStart`: 저장된 튜토리얼 플래그를 읽었고, "How to play" 오버레이가 닫혀 있고, 플레이어가 준비 카드("Tap / press Space to start")에서 첫 입력(탭, 드래그, Space/Enter, 방향키/A/D)을 해서 런이 시작됐을 때. 페이지를 열자마자 런이 자동으로 시작되지 않는다.
   - `gameplayStop`: 오버레이가 열릴 때(첫 실행 또는 ? 버튼), 충돌로 게임 오버가 될 때.
   - `gameplayStart`: 오버레이가 닫힐 때, 게임 오버 후 Restart 할 때.
 - `SDK.init()` 실패/타임아웃/SDK 없음/environment가 `crazygames`·`local`이 아님이면 어댑터는 조용히 꺼지고 게임은 그대로 플레이된다.
