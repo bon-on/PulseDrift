@@ -5,6 +5,7 @@ status: active
 related_specs:
   - feature-cross-platform-migration
   - feature-sound-effects
+  - feature-retention-polish
 evidence_files:
   - reports/repo-kit-audit-report.md
 ---

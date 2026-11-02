@@ -7,6 +7,7 @@ related_specs:
   - feature-pulse-drift-pattern-variety
   - feature-how-to-play-tutorial
   - feature-sound-effects
+  - feature-retention-polish
 ---
 
 # ADR: PulseDrift의 유일한 운영 런타임으로 Flutter를 사용

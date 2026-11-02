@@ -4,6 +4,7 @@ title: PulseDrift GamePix 웹 배포 계약
 status: active
 related_specs:
   - feature-pulse-drift-gamepix
+  - feature-retention-polish
 evidence_files:
   - docs/gamepix.md
   - reports/pulse-drift-gamepix-verification.md

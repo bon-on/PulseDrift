@@ -4,6 +4,7 @@ title: GamePix 배포에 SDK 없는 GAMEPIX 빌드 플래그 사용
 status: accepted
 related_specs:
   - feature-pulse-drift-gamepix
+  - feature-retention-polish
 ---
 
 # ADR: GamePix 배포에 SDK 없는 GAMEPIX 빌드 플래그 사용
