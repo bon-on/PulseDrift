@@ -13,8 +13,12 @@ class GameController extends ChangeNotifier {
     VoidCallback? onGateDodged,
     VoidCallback? onCrash,
     VoidCallback? onRestarted,
+    VoidCallback? onNearMiss,
+    void Function(Offset position)? onSparkCollected,
     math.Random? random,
   }) : _bestScoreStore = bestScoreStore,
+       _onNearMiss = onNearMiss,
+       _onSparkCollected = onSparkCollected,
        _onGateDodged = onGateDodged,
        _onCrash = onCrash,
        _onRestarted = onRestarted,
@@ -24,6 +28,8 @@ class GameController extends ChangeNotifier {
   final VoidCallback? _onGateDodged;
   final VoidCallback? _onCrash;
   final VoidCallback? _onRestarted;
+  final VoidCallback? _onNearMiss;
+  final void Function(Offset position)? _onSparkCollected;
   final math.Random _random;
 
   final List<GateState> _gates = <GateState>[];
@@ -43,11 +49,23 @@ class GameController extends ChangeNotifier {
   int _previousLane = 1;
   int _nearMisses = 0;
   double _nearMissFlash = 0;
+  int _sparksCollected = 0;
 
   List<GateState> get gates => List<GateState>.unmodifiable(_gates);
   List<SparkState> get sparks => List<SparkState>.unmodifiable(_sparks);
   int get currentLane => _currentLane;
   int get nearMisses => _nearMisses;
+
+  /// Sparks picked up this run.
+  int get sparksCollected => _sparksCollected;
+
+  /// Seconds the current run has been simulated (survival time).
+  double get runSeconds => _clock;
+
+  /// Run clock of the last lane change and the lane it left; the view uses
+  /// them for the bank/squash animation.
+  double get laneChangedAt => _laneChangedAt;
+  int get previousLane => _previousLane;
 
   /// Seconds left of the near-miss highlight (0 when idle).
   double get nearMissFlash => _nearMissFlash;
@@ -156,6 +174,7 @@ class GameController extends ChangeNotifier {
     _previousLane = 1;
     _nearMisses = 0;
     _nearMissFlash = 0;
+    _sparksCollected = 0;
     _playerVisualX = _viewportSize.isEmpty ? 0 : laneCenters[_currentLane];
     _onRestarted?.call();
     notifyListeners();
@@ -206,6 +225,7 @@ class GameController extends ChangeNotifier {
           _nearMissFlash = 0.6;
           _score += GameBalance.nearMissBonus.round();
           _syncBestScore();
+          _onNearMiss?.call();
         }
       }
 
@@ -230,7 +250,11 @@ class GameController extends ChangeNotifier {
 
       if (collides) {
         _score += GameBalance.sparkBonus;
+        _sparksCollected += 1;
         _syncBestScore();
+        _onSparkCollected?.call(
+          Offset(laneCenters[spark.lane], spark.yPosition),
+        );
       }
 
       return collides;

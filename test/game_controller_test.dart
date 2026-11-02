@@ -168,4 +168,54 @@ void main() {
     expect(sawDouble, isTrue);
     expect(sawBait, isTrue);
   });
+
+  test('near miss and spark pickups fire events and count', () {
+    var nearMissEvents = 0;
+    final sparkHits = <Offset>[];
+    for (var seed = 0; seed < 60 && sparkHits.isEmpty; seed++) {
+      final controller = GameController(
+        bestScoreStore: InMemoryBestScoreStore(),
+        random: math.Random(seed),
+        onNearMiss: () => nearMissEvents++,
+        onSparkCollected: sparkHits.add,
+      );
+      controller.setViewportSize(const Size(300, 600));
+      controller.debugSetCleanDodges(20);
+      controller.update(GameBalance.gateSpawnDelayFor(20) + 0.01);
+      if (controller.sparks.isEmpty) continue;
+      final spark = controller.sparks.single;
+      controller.shiftLane(spark.lane - controller.currentLane);
+      for (var i = 0; i < 300 && controller.sparks.isNotEmpty; i++) {
+        controller.update(0.01);
+      }
+      expect(controller.sparksCollected, 1);
+      expect(controller.runSeconds, greaterThan(0));
+      controller.restart();
+      expect(controller.sparksCollected, 0);
+      expect(controller.runSeconds, 0);
+    }
+    expect(sparkHits, isNotEmpty);
+
+    final controller = GameController(
+      bestScoreStore: InMemoryBestScoreStore(),
+      random: math.Random(3),
+      onNearMiss: () => nearMissEvents++,
+    );
+    controller.setViewportSize(const Size(300, 600));
+    controller.update(GameBalance.gateSpawnDelayFor(0) + 0.01);
+    final gate = controller.gates.first;
+    final wrongLane = [0, 1, 2].firstWhere((l) => !gate.openLanes.contains(l));
+    controller.shiftLane(wrongLane - controller.currentLane);
+    var switched = false;
+    for (var i = 0; i < 400 && !gate.scored; i++) {
+      if (!switched && gate.yPosition >= 480 - 34 - controller.speed * 0.1) {
+        controller.shiftLane(gate.openLanes.first - controller.currentLane);
+        switched = true;
+        expect(controller.laneChangedAt, controller.runSeconds);
+        expect(controller.previousLane, wrongLane);
+      }
+      controller.update(0.01);
+    }
+    expect(nearMissEvents, 1);
+  });
 }
