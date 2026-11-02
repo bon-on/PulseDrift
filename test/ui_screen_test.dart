@@ -32,10 +32,16 @@ class _Unmuted extends SoundMuteStore {
 }
 
 class _Best implements BestScoreStore {
-  int value = 0;
+  _Best([this.value = 0]);
+
+  int value;
+  Completer<void>? gate;
 
   @override
-  Future<int> loadBestScore() async => value;
+  Future<int> loadBestScore() async {
+    await gate?.future;
+    return value;
+  }
 
   @override
   Future<void> saveBestScore(int score) async => value = score;
@@ -81,6 +87,7 @@ Future<void> _pump(
   Size size = const Size(390, 844),
   ProgressStore? progress,
   GamePlatform? platform,
+  BestScoreStore? best,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -90,7 +97,7 @@ Future<void> _pump(
       home: GameScreen(
         platform: platform ?? _Platform(),
         tutorialStore: _Seen(),
-        bestScoreStore: _Best(),
+        bestScoreStore: best ?? _Best(),
         progressStore: progress ?? MemoryProgressStore(),
         random: math.Random(5),
         soundMuteStore: _Unmuted(),
@@ -311,5 +318,46 @@ void main() {
     await tester.tap(find.text('Play again'));
     await tester.pump();
     expect(calls, contains('startLoop'));
+  });
+
+  testWidgets('help opened during the shatter defers, not loses, the summary', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    final game = _game(tester);
+    for (var i = 0; i < 2400 && !game.isGameOver; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.tap(find.byTooltip('How to play'));
+    await tester.pump();
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // The tutorial keeps its keys while it is open.
+    expect(find.text('Play again'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.text('How to play'), findsNothing);
+    expect(find.text('Play again'), findsOneWidget);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(game.isGameOver, isFalse);
+  });
+
+  testWidgets('a best score that loads after the run started still counts', (
+    tester,
+  ) async {
+    final best = _Best(100000)..gate = Completer<void>();
+    await _pump(tester, best: best);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    best.gate!.complete();
+    await _playToSummary(tester);
+    expect(find.text('NEW BEST!'), findsNothing);
+    expect(find.text('RUN OVER'), findsOneWidget);
   });
 }

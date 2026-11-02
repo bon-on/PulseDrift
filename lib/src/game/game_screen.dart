@@ -176,7 +176,9 @@ class _GameScreenState extends State<GameScreen>
       await _controller.initialize();
     } catch (_) {}
     if (!mounted) return;
-    if (!_runStarted) _runBestBefore = _controller.bestScore;
+    // A run started before the stored best loaded must still compare
+    // against it for "New best!".
+    _runBestBefore = math.max(_runBestBefore, _controller.bestScore);
     _refreshHud();
   }
 
@@ -583,6 +585,16 @@ class _GameScreenState extends State<GameScreen>
         : (elapsed - previousTick).inMicroseconds /
               Duration.microsecondsPerSecond;
 
+    // The summary follows a crash on wall time, even if "?" or Themes was
+    // opened during the shatter, so the player is never left on a dead run.
+    final due = _summaryIn;
+    if (due != null) {
+      _summaryIn = due - dt;
+      // Wait for an open overlay to close so the summary never takes its
+      // keyboard focus.
+      if (_summaryIn! <= 0 && !_overlayOpen) _openSummary();
+    }
+
     // Overlays freeze the world (simulation and effects); the tick above is
     // still recorded so closing one does not produce a large time jump.
     if (_tutorialLoading || _overlayOpen) return;
@@ -603,11 +615,6 @@ class _GameScreenState extends State<GameScreen>
       roadSpeed: running ? _controller.speed : (_runStarted ? 0 : 80),
       shipX: _controller.laneCenters.isEmpty ? null : _controller.playerVisualX,
     );
-    final due = _summaryIn;
-    if (due != null) {
-      _summaryIn = due - dt;
-      if (_summaryIn! <= 0) _openSummary();
-    }
     _refreshHud();
   }
 
