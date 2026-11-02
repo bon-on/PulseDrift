@@ -32,6 +32,9 @@ const double maxPlayColumnWidth = 480;
 /// Seconds between the crash and the summary (the shatter plays meanwhile).
 const double summaryDelaySeconds = 0.9;
 
+/// Longest simulation step per frame, in seconds.
+const double maxSimulationStep = 0.05;
+
 /// Values the HUD shows during a run; rebuilt only when one changes.
 class _HudValues {
   const _HudValues({
@@ -601,7 +604,9 @@ class _GameScreenState extends State<GameScreen>
 
     if (_simulating && dt > 0) {
       final wasOver = _controller.isGameOver;
-      _controller.update(dt);
+      // A long frame (hidden tab, backgrounded app) must not skip gates past
+      // the ship or bank survival time; the world steps at most 50 ms.
+      _controller.update(math.min(dt, maxSimulationStep));
       if (!_controller.isGameOver) {
         _checkRunGoals();
       } else if (!wasOver && _report == null) {

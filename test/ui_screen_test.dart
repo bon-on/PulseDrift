@@ -360,4 +360,17 @@ void main() {
     expect(find.text('NEW BEST!'), findsNothing);
     expect(find.text('RUN OVER'), findsOneWidget);
   });
+
+  testWidgets('a long frame cannot skip gates or bank survival time', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    final game = _game(tester);
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(seconds: 30));
+    expect(game.runSeconds, lessThan(0.2));
+    expect(game.cleanDodges, 0);
+  });
 }
