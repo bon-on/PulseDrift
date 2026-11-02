@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../art/drift_palette.dart';
+import 'ui/hud_widgets.dart';
+
 /// Remembers whether the first-run tutorial has been seen.
 abstract class TutorialStore {
   Future<bool> isSeen();
@@ -66,10 +69,12 @@ class HowToPlayOverlay extends StatefulWidget {
     super.key,
     required this.onClose,
     this.steps = howToPlaySteps,
+    this.palette = DriftPalette.neon,
   });
 
   final VoidCallback onClose;
   final List<HowToPlayStep> steps;
+  final DriftPalette palette;
 
   @override
   State<HowToPlayOverlay> createState() => _HowToPlayOverlayState();
@@ -138,7 +143,7 @@ class _HowToPlayOverlayState extends State<HowToPlayOverlay> {
   @override
   Widget build(BuildContext context) {
     final step = widget.steps[_step];
-    const accent = Color(0xFF25D7D9);
+    final p = widget.palette;
     return Focus(
       focusNode: _focusNode,
       autofocus: true,
@@ -154,71 +159,98 @@ class _HowToPlayOverlayState extends State<HowToPlayOverlay> {
             color: const Color(0xCC000000),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
+                constraints: const BoxConstraints(maxWidth: 380),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Material(
-                    color: const Color(0xFF182129),
-                    borderRadius: BorderRadius.circular(24),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'How to play',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
+                    type: MaterialType.transparency,
+                    child: NeonPanel(
+                      palette: p,
+                      glow: 0.5,
+                      solid: true,
+                      padding: EdgeInsets.zero,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'How to play',
+                              style: TextStyle(
+                                color: p.text,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          Icon(step.icon, size: 48, color: accent),
-                          const SizedBox(height: 12),
-                          Text(
-                            step.text,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              height: 1.35,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              for (var i = 0; i < widget.steps.length; i++)
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 3,
+                            const SizedBox(height: 16),
+                            Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: p.accent, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: p.accent.withValues(alpha: 0.45),
+                                    blurRadius: 18,
                                   ),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: i == _step
-                                        ? accent
-                                        : Colors.white.withValues(alpha: 0.25),
+                                ],
+                              ),
+                              child: Icon(step.icon, size: 40, color: p.accent),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              step.text,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 15,
+                                height: 1.4,
+                                color: p.text.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (var i = 0; i < widget.steps.length; i++)
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: i == _step ? 20 : 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: i == _step
+                                          ? p.accent
+                                          : Colors.white.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton(
+                                  onPressed: widget.onClose,
+                                  child: Text(
+                                    'Skip',
+                                    style: TextStyle(color: p.textDim),
                                   ),
                                 ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                onPressed: widget.onClose,
-                                child: const Text('Skip'),
-                              ),
-                              FilledButton(
-                                onPressed: _next,
-                                child: Text(_last ? 'Play' : 'Next'),
-                              ),
-                            ],
-                          ),
-                        ],
+                                NeonButton(
+                                  label: _last ? 'Play' : 'Next',
+                                  onPressed: _next,
+                                  palette: p,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

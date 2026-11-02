@@ -100,6 +100,13 @@ Future<void> _crash(WidgetTester tester) async {
   expect(game.isGameOver, isTrue);
 }
 
+/// Lets the crash shatter play out until the run summary is up.
+Future<void> _waitSummary(WidgetTester tester) async {
+  for (var i = 0; i < 12; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 /// Steers into a walled lane of the first gate, so the run ends at 0 points.
 Future<void> _crashWithoutScore(WidgetTester tester) async {
   final game = _controller(tester);
@@ -216,7 +223,8 @@ void main() {
     await tester.pump();
     expect(platform.events, <String>['start', 'stop']);
 
-    await tester.tap(find.text('Restart'));
+    await _waitSummary(tester);
+    await tester.tap(find.text('Play again'));
     await tester.pump();
     expect(platform.events, <String>['start', 'stop', 'start']);
   });
@@ -285,7 +293,7 @@ void main() {
     expect(tester.widget<AdBanner>(find.byType(AdBanner)).enabled, isFalse);
     await _start(tester);
     await _crashAfterScoring(tester);
-    await tester.pump();
+    await _waitSummary(tester);
     await tester.pump();
     expect(find.text('기록을 등록할까요?'), findsNothing);
 
@@ -294,7 +302,7 @@ void main() {
     await _pump(tester, on, _Tutorial(seen: true), enableAds: false);
     await _start(tester);
     await _crashAfterScoring(tester);
-    await tester.pump();
+    await _waitSummary(tester);
     await tester.pump();
     expect(find.text('기록을 등록할까요?'), findsOneWidget);
   });
@@ -306,7 +314,7 @@ void main() {
     await _pump(tester, on, _Tutorial(seen: true));
     await _start(tester);
     await _crashWithoutScore(tester);
-    await tester.pump();
+    await _waitSummary(tester);
     await tester.pump();
     expect(find.text('기록을 등록할까요?'), findsNothing);
   });
