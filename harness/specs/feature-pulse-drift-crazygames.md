@@ -33,7 +33,7 @@ PulseDrift 웹 빌드는 GitHub Pages에만 배포된다. CrazyGames 포털에 �
 - `tool/build_crazygames.sh`가 `build/crazygames/`와 `build/pulse-drift-crazygames.zip`을 만든다: 상대 `<base href="./">`, 인라인 Flutter 로더 앞의 SDK script, 게임 허브 내비게이션 바(`feature-game-hub-navigation`) 제거와 높이 0, `*.symbols` 삭제, 파일 1500개 이하, 50MB 이하, 치환 결과 자체 검사.
 - 튜토리얼 후속 수정: 저장 플래그를 읽는 동안 입력과 시뮬레이션을 막고, 게임 오버 후 키 반복(KeyRepeat)으로 재시작되지 않게 하며, 오버레이와 게임이 Tab/F5/Ctrl/Meta/Alt 단축키를 가로채지 않는다.
 
-제외 범위: 게임 플레이/밸런스 변경, 보상형 광고, Data/User 모듈, 웹 오디오 추가, 포털 업로드.
+제외 범위: 게임 플레이/밸런스 변경, 보상형 광고, 웹 오디오 추가, 포털 업로드. (Data/User 모듈은 이후 `feature-crazygames-cloud-save`에서 진행도 저장 용도로만 도입했다.)
 
 ## Acceptance Criteria
 

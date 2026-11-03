@@ -7,6 +7,7 @@ related_specs:
   - feature-pulse-drift-crazygames
   - feature-sound-effects
   - feature-retention-polish
+  - feature-crazygames-cloud-save
 evidence_files:
   - docs/crazygames.md
   - reports/pulse-drift-crazygames-verification.md
