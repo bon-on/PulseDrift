@@ -55,5 +55,5 @@ cd build && python3 -m http.server 8765
 - 방향: 세로(portrait) 위주. 데스크톱에서는 480px 폭 열이 가운데에 표시된다.
 - 입력: 터치/마우스 드래그·탭, 키보드(←/→, A/D, Space/Enter 재시작).
 - 오디오: 효과음(pulse_pass, crash)과 배경 루프를 HTML `Audio`로 재생한다. 브라우저 자동재생 정책 때문에 루프는 첫 사용자 입력(탭/키) 뒤에 시작한다. CrazyGames `settings.muteAudio`와 헤더의 소리 버튼(`sound_muted_v1`)이 모두 적용된다.
-- 필요한 커버(아직 만들지 않음): 1920x1080, 800x1200, 800x800.
+- 준비된 커버: 1920x1080, 800x1200, 800x800 (`../_marketing/crazygames-launch-2026-11-06/PulseDrift/`).
 - Basic Launch로 먼저 제출한다.
