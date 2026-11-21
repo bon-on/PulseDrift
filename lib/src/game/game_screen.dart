@@ -100,6 +100,7 @@ class _GameScreenState extends State<GameScreen>
   late final math.Random _random;
   final DriftFx _fx = DriftFx();
   Duration? _lastTick;
+  bool _appActive = true;
   bool _wasGameOver = false;
   int _completedRuns = 0;
   final FocusNode _gameFocus = FocusNode(debugLabel: 'game');
@@ -136,7 +137,11 @@ class _GameScreenState extends State<GameScreen>
 
   /// The simulation advances only while a started run is visible.
   bool get _simulating =>
-      _runStarted && !_tutorialLoading && !_overlayOpen && !_summaryOpen;
+      _appActive &&
+      _runStarted &&
+      !_tutorialLoading &&
+      !_overlayOpen &&
+      !_summaryOpen;
 
   @override
   void initState() {
@@ -147,14 +152,13 @@ class _GameScreenState extends State<GameScreen>
       store: widget.soundMuteStore,
     );
     widget.platform.addAudioMuteListener(_sound.refreshMute);
-    // Hidden tab or backgrounded app: pause the loop (web reports
-    // visibilitychange as hidden/resumed).
-    _lifecycle = AppLifecycleListener(
-      onStateChange: (state) => _sound.setAppVisible(
-        state == AppLifecycleState.resumed ||
-            state == AppLifecycleState.inactive,
-      ),
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    _appActive =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+    _sound.setAppVisible(
+      _appActive || lifecycleState == AppLifecycleState.inactive,
     );
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycleChanged);
     _controller = GameController(
       bestScoreStore: widget.bestScoreStore ?? SharedPrefsBestScoreStore(),
       random: widget.random,
@@ -172,6 +176,13 @@ class _GameScreenState extends State<GameScreen>
     _sound.startBackgroundLoop();
     _ticker = createTicker(_onTick)..start();
     unawaited(_maybeShowTutorial());
+  }
+
+  void _onLifecycleChanged(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    _lastTick = null;
+    _sound.setAppVisible(_appActive || state == AppLifecycleState.inactive);
+    _syncGameplay();
   }
 
   Future<void> _initializeController() async {
@@ -248,6 +259,7 @@ class _GameScreenState extends State<GameScreen>
   /// playing means a started run, no overlay and no crash.
   void _syncGameplay() {
     final wantActive =
+        _appActive &&
         _runStarted &&
         !_tutorialLoading &&
         !_overlayOpen &&
@@ -264,7 +276,11 @@ class _GameScreenState extends State<GameScreen>
   /// Leaves the ready card on the player's first input. Returns whether the
   /// run started now (false if it was already running or input is blocked).
   bool _startRun() {
-    if (_runStarted || _tutorialLoading || _overlayOpen || _summaryOpen) {
+    if (!_appActive ||
+        _runStarted ||
+        _tutorialLoading ||
+        _overlayOpen ||
+        _summaryOpen) {
       return false;
     }
     setState(() => _runStarted = true);
@@ -542,6 +558,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_appActive) return KeyEventResult.ignored;
     _sound.onUserInput();
     if (_tutorialLoading || _overlayOpen || _summaryOpen) {
       return KeyEventResult.ignored;
@@ -581,6 +598,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _onTick(Duration elapsed) {
+    if (!_appActive) return;
     final previousTick = _lastTick;
     _lastTick = elapsed;
     final dt = previousTick == null
@@ -588,7 +606,7 @@ class _GameScreenState extends State<GameScreen>
         : (elapsed - previousTick).inMicroseconds /
               Duration.microsecondsPerSecond;
 
-    // The summary follows a crash on wall time, even if "?" or Themes was
+    // The summary follows a crash on foreground time, even if "?" or Themes was
     // opened during the shatter, so the player is never left on a dead run.
     final due = _summaryIn;
     if (due != null) {

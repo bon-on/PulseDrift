@@ -137,6 +137,41 @@ Future<void> _crashAfterScoring(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('inactive and hidden states freeze the run until resume', (
+    tester,
+  ) async {
+    final platform = _FakePlatform();
+    await _pump(tester, platform, _Tutorial(seen: true));
+    await _start(tester);
+    await tester.pump(const Duration(milliseconds: 30));
+    final game = _controller(tester);
+    final seconds = game.runSeconds;
+    final lane = game.currentLane;
+
+    final binding = tester.binding;
+    addTearDown(
+      () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+    );
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    expect(game.currentLane, lane);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump(const Duration(seconds: 5));
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump(const Duration(seconds: 5));
+    expect(game.runSeconds, seconds);
+    expect(game.currentLane, lane);
+    expect(platform.events, ['start', 'stop']);
+
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 5));
+    expect(game.runSeconds, seconds);
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(game.runSeconds, closeTo(seconds + 0.016, 0.000001));
+    expect(platform.events, ['start', 'stop', 'start']);
+  });
+
   testWidgets('the run waits on the ready card until the first input', (
     tester,
   ) async {
