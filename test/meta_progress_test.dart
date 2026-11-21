@@ -162,6 +162,7 @@ void main() {
         expect(low.missions.length, 3);
         expect(low.missions.map((m) => m.kind).toSet().length, 3);
         expect(low.missions.any((m) => m.kind == MissionKind.sparks), isFalse);
+        expect(low.missions.any((m) => m.kind == MissionKind.nearMiss), isFalse);
         for (final m in low.missions) {
           expect(m.target, m.kind.targets.first);
         }
@@ -170,6 +171,32 @@ void main() {
           expect(m.target, m.kind.targets.last);
         }
       }
+    });
+
+    test('level two restores optional risk goals without changing targets', () {
+      final seen = <MissionKind>{};
+      for (var seed = 0; seed < 80; seed++) {
+        final set = MissionSet.forLevel(2, Random(seed));
+        expect(set.missions.map((m) => m.kind).toSet().length, 3);
+        for (final mission in set.missions) {
+          seen.add(mission.kind);
+          expect(mission.target, mission.kind.targets[1]);
+        }
+      }
+      expect(seen, containsAll(MissionKind.values));
+    });
+
+    test('beginner missions can all finish with no near misses or sparks', () {
+      final set = MissionSet.forLevel(1, Random(7));
+      final earned = set.update(
+        const RunStats(seconds: 15, multiplier: 2, gates: 10, score: 100),
+      );
+      expect(earned.length, 3);
+      expect(set.completedCount, 3);
+      final xp = set.xpEarned;
+      expect(xp, set.missions.fold<int>(0, (sum, m) => sum + m.xp));
+      expect(set.update(const RunStats(seconds: 40, score: 999)), isEmpty);
+      expect(set.xpEarned, xp);
     });
 
     test('progress, completion once, and xp', () {

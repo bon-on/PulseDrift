@@ -94,8 +94,11 @@ class MissionSet {
     final tier = (level - 1).clamp(0, 6);
     final pool = [
       for (final kind in MissionKind.values)
-        // Sparks only appear after a few gates; keep them off the first set.
-        if (tier > 0 || kind != MissionKind.sparks) kind,
+        // New pilots learn safe survival before chasing risky near misses
+        // or sparks that only appear after a few gates.
+        if (tier > 0 ||
+            (kind != MissionKind.sparks && kind != MissionKind.nearMiss))
+          kind,
     ]..shuffle(random);
     return MissionSet([
       for (final kind in pool.take(3)) Mission(kind, kind.targets[tier]),
