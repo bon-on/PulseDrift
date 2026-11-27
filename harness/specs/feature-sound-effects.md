@@ -29,11 +29,10 @@ session (`.playback`) ignores the silent switch and interrupts the user's music.
   plays `pulse_pass` when a gate is dodged and `crash` when the run ends, and
   runs the music loop (`music_loop.wav` since `feature-retention-polish`,
   which also adds near-miss, spark, multiplier, mission and level-up effects).
-- Web: HTML `Audio` per asset (`web_sound_web.dart`, conditional import with a
+- Web: Web Audio buffer sources since `feature-web-audio-playback` (`web_sound_web.dart`, conditional import with a
   stub). Browser autoplay rules: the loop only starts after the first user
   input (pointer down/up, key, or closing the tutorial) and is retried on later
-  input if the browser refused it. Effects reset `currentTime` and ignore
-  `play()` rejections.
+  input if the browser refused it. Effects never throw into input.
 - Native: the `pulse_drift/audio` MethodChannel takes asset names
   (`play` and `startLoop` with `asset`/`volume`, `stopLoop`, `disposeAudio`;
   generalized by `feature-retention-polish`). iOS uses audio session `.ambient`.
