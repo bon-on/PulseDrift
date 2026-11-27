@@ -169,70 +169,98 @@ class _HowToPlayOverlayState extends State<HowToPlayOverlay> {
                       glow: 0.5,
                       solid: true,
                       padding: EdgeInsets.zero,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'How to play',
-                              style: TextStyle(
-                                color: p.text,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              width: 76,
-                              height: 76,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: p.accent, width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: p.accent.withValues(alpha: 0.45),
-                                    blurRadius: 18,
+                      // Skip and Next stay pinned below the scrolling step
+                      // so short or landscape phones can always leave.
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'How to play',
+                                    style: TextStyle(
+                                      color: p.text,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: 76,
+                                    height: 76,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: p.accent,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: p.accent.withValues(
+                                            alpha: 0.45,
+                                          ),
+                                          blurRadius: 18,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      step.icon,
+                                      size: 40,
+                                      color: p.accent,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    step.text,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      height: 1.4,
+                                      color: p.text.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      for (
+                                        var i = 0;
+                                        i < widget.steps.length;
+                                        i++
+                                      )
+                                        AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          width: i == _step ? 20 : 8,
+                                          height: 8,
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            color: i == _step
+                                                ? p.accent
+                                                : Colors.white.withValues(
+                                                    alpha: 0.25,
+                                                  ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              child: Icon(step.icon, size: 40, color: p.accent),
                             ),
-                            const SizedBox(height: 14),
-                            Text(
-                              step.text,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 15,
-                                height: 1.4,
-                                color: p.text.withValues(alpha: 0.9),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                for (var i = 0; i < widget.steps.length; i++)
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: i == _step ? 20 : 8,
-                                    height: 8,
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      color: i == _step
-                                          ? p.accent
-                                          : Colors.white.withValues(
-                                              alpha: 0.25,
-                                            ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 TextButton(
@@ -249,8 +277,8 @@ class _HowToPlayOverlayState extends State<HowToPlayOverlay> {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

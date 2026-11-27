@@ -171,170 +171,167 @@ class _RunSummaryOverlayState extends State<RunSummaryOverlay> {
         onEnter: widget.onPlayAgain,
         onEscape: widget.onMenu,
       ),
-      child: _Scrim(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: NeonPanel(
-            palette: p,
-            glow: 0.6,
-            solid: true,
-            padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  r.isNewBest ? 'NEW BEST!' : 'RUN OVER',
-                  style: TextStyle(
+      child: _ScrimCard(
+        palette: p,
+        maxWidth: 420,
+        glow: 0.6,
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              r.isNewBest ? 'NEW BEST!' : 'RUN OVER',
+              style: TextStyle(
+                color: r.isNewBest ? p.gold : p.accent2,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3,
+                shadows: [
+                  Shadow(
                     color: r.isNewBest ? p.gold : p.accent2,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 3,
-                    shadows: [
-                      Shadow(
-                        color: r.isNewBest ? p.gold : p.accent2,
-                        blurRadius: 12,
-                      ),
-                    ],
+                    blurRadius: 12,
                   ),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '${r.score}',
-                    style: TextStyle(
-                      color: p.text,
-                      fontSize: 56,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                      shadows: [Shadow(color: p.accent, blurRadius: 20)],
-                    ),
-                  ),
-                ),
-                Text(
-                  'Best ${r.bestScore}',
-                  style: TextStyle(
-                    color: p.textDim,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatTile(
-                        label: outcome.isNewBestTime ? 'Time (best!)' : 'Time',
-                        value: formatSeconds(r.seconds),
-                        palette: p,
-                        emphasis: outcome.isNewBestTime ? p.gold : null,
-                        valueSize: 18,
-                      ),
-                    ),
-                    Expanded(
-                      child: StatTile(
-                        label: 'Close calls',
-                        value: '${r.nearMisses}',
-                        palette: p,
-                        valueSize: 18,
-                      ),
-                    ),
-                    Expanded(
-                      child: StatTile(
-                        label: 'Top x',
-                        value: 'x${r.peakMultiplier.toStringAsFixed(1)}',
-                        palette: p,
-                        valueSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: HudLabel('Missions', palette: p),
-                ),
-                const SizedBox(height: 6),
-                MissionList(
-                  palette: p,
-                  missions: r.missions,
-                  progress: [
-                    for (var i = 0; i < r.missions.length; i++)
-                      r.missionsDone[i] ? r.missions[i].target : 0,
-                  ],
-                  done: r.missionsDone,
-                  compact: true,
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Text(
-                      'PILOT LV ${after.level}',
-                      style: TextStyle(
-                        color: p.text,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '+${outcome.xpGained} XP',
-                      style: TextStyle(
-                        color: p.gold,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                LevelBar(palette: p, from: fracBefore, to: fracAfter),
-                if (outcome.leveledUp) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    'Level up!',
-                    style: TextStyle(
-                      color: p.gold,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      shadows: [Shadow(color: p.gold, blurRadius: 10)],
-                    ),
-                  ),
-                  for (final theme in outcome.newlyUnlockedThemes)
-                    Text(
-                      '${theme.label} theme + ${theme.shipName} ship unlocked',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: p.accent,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
                 ],
-                const SizedBox(height: 18),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    NeonButton(
-                      label: 'Play again',
-                      icon: Icons.replay_rounded,
-                      onPressed: widget.onPlayAgain,
-                      palette: p,
-                    ),
-                    NeonButton(
-                      label: 'Menu',
-                      onPressed: widget.onMenu,
-                      palette: p,
-                      primary: false,
-                    ),
-                  ],
+              ),
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${r.score}',
+                style: TextStyle(
+                  color: p.text,
+                  fontSize: 56,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  shadows: [Shadow(color: p.accent, blurRadius: 20)],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Enter / Space to play again, Esc for menu',
-                  style: TextStyle(color: p.textDim, fontSize: 11),
+              ),
+            ),
+            Text(
+              'Best ${r.bestScore}',
+              style: TextStyle(color: p.textDim, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: StatTile(
+                    label: outcome.isNewBestTime ? 'Time (best!)' : 'Time',
+                    value: formatSeconds(r.seconds),
+                    palette: p,
+                    emphasis: outcome.isNewBestTime ? p.gold : null,
+                    valueSize: 18,
+                  ),
+                ),
+                Expanded(
+                  child: StatTile(
+                    label: 'Close calls',
+                    value: '${r.nearMisses}',
+                    palette: p,
+                    valueSize: 18,
+                  ),
+                ),
+                Expanded(
+                  child: StatTile(
+                    label: 'Top x',
+                    value: 'x${r.peakMultiplier.toStringAsFixed(1)}',
+                    palette: p,
+                    valueSize: 18,
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: HudLabel('Missions', palette: p),
+            ),
+            const SizedBox(height: 6),
+            MissionList(
+              palette: p,
+              missions: r.missions,
+              progress: [
+                for (var i = 0; i < r.missions.length; i++)
+                  r.missionsDone[i] ? r.missions[i].target : 0,
+              ],
+              done: r.missionsDone,
+              compact: true,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'PILOT LV ${after.level}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: p.text,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                Text(
+                  '+${outcome.xpGained} XP',
+                  style: TextStyle(color: p.gold, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            LevelBar(palette: p, from: fracBefore, to: fracAfter),
+            if (outcome.leveledUp) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Level up!',
+                style: TextStyle(
+                  color: p.gold,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  shadows: [Shadow(color: p.gold, blurRadius: 10)],
+                ),
+              ),
+              for (final theme in outcome.newlyUnlockedThemes)
+                Text(
+                  '${theme.label} theme + ${theme.shipName} ship unlocked',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: p.accent,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+            ],
+          ],
+        ),
+        footer: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 18),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 10,
+              children: [
+                NeonButton(
+                  label: 'Play again',
+                  icon: Icons.replay_rounded,
+                  onPressed: widget.onPlayAgain,
+                  palette: p,
+                ),
+                NeonButton(
+                  label: 'Menu',
+                  onPressed: widget.onMenu,
+                  palette: p,
+                  primary: false,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Enter / Space to play again, Esc for menu',
+              style: TextStyle(color: p.textDim, fontSize: 11),
+            ),
+          ],
         ),
       ),
     );
@@ -388,62 +385,59 @@ class _ThemePickerOverlayState extends State<ThemePickerOverlay> {
         onEnter: widget.onClose,
         onEscape: widget.onClose,
       ),
-      child: _Scrim(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460),
-          child: NeonPanel(
-            palette: p,
-            glow: 0.5,
-            solid: true,
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Themes',
-                  style: TextStyle(
-                    color: p.text,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  'Level up your pilot to unlock roads and ships.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: p.textDim, fontSize: 12.5),
-                ),
-                const SizedBox(height: 14),
-                LayoutBuilder(
-                  builder: (context, c) {
-                    final w = (c.maxWidth - 12) / 2;
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        for (final theme in DriftTheme.values)
-                          SizedBox(
-                            width: w,
-                            child: _ThemeCard(
-                              theme: theme,
-                              selected: progress.selectedTheme == theme,
-                              unlocked: progress.isThemeUnlocked(theme),
-                              palette: p,
-                              onTap: () => widget.onSelect(theme),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
-                NeonButton(
-                  label: 'Done',
-                  onPressed: widget.onClose,
-                  palette: p,
-                  primary: false,
-                ),
-              ],
+      child: _ScrimCard(
+        palette: p,
+        maxWidth: 460,
+        glow: 0.5,
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Themes',
+              style: TextStyle(
+                color: p.text,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
             ),
+            Text(
+              'Level up your pilot to unlock roads and ships.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: p.textDim, fontSize: 12.5),
+            ),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, c) {
+                final w = (c.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final theme in DriftTheme.values)
+                      SizedBox(
+                        width: w,
+                        child: _ThemeCard(
+                          theme: theme,
+                          selected: progress.selectedTheme == theme,
+                          unlocked: progress.isThemeUnlocked(theme),
+                          palette: p,
+                          onTap: () => widget.onSelect(theme),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+        footer: Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: NeonButton(
+            label: 'Done',
+            onPressed: widget.onClose,
+            palette: p,
+            primary: false,
           ),
         ),
       ),
@@ -535,11 +529,25 @@ class _ThemeCard extends StatelessWidget {
   }
 }
 
-/// Dark scrim that swallows taps and drags and centres a scrollable card.
-class _Scrim extends StatelessWidget {
-  const _Scrim({required this.child});
+/// Dark scrim that swallows taps and drags and centres a card. The body
+/// scrolls when the screen is short; the footer (the card's buttons) stays
+/// pinned so a short or landscape phone can always leave the card.
+class _ScrimCard extends StatelessWidget {
+  const _ScrimCard({
+    required this.palette,
+    required this.maxWidth,
+    required this.glow,
+    required this.padding,
+    required this.body,
+    required this.footer,
+  });
 
-  final Widget child;
+  final DriftPalette palette;
+  final double maxWidth;
+  final double glow;
+  final EdgeInsets padding;
+  final Widget body;
+  final Widget footer;
 
   @override
   Widget build(BuildContext context) {
@@ -551,9 +559,24 @@ class _Scrim extends StatelessWidget {
         color: const Color(0xB3000000),
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              child: child,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: NeonPanel(
+                  palette: palette,
+                  glow: glow,
+                  solid: true,
+                  padding: padding,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(child: SingleChildScrollView(child: body)),
+                      footer,
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
