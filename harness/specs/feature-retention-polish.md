@@ -72,7 +72,7 @@ PulseDrift도 흰 원(플레이어), 주황 사각형(게이트), 회색 선(레
 - 새 패키지 의존성을 추가하지 않는다. 그림은 코드로, 소리는 생성기로 만든다.
 - lib/ 문자열은 영어 ASCII다(GamePix 빌드 검사). GitHub Pages 전용 결과 등록 문구(한국어)는 기존 그대로 둔다.
 - 3레인 회피 규칙, 속도/스폰/점수 계산(`GameBalance`)은 바꾸지 않는다. 컨트롤러에는 연출과 미션용 통계(생존 시간, 스파크 수)와 이벤트 콜백(니어미스, 스파크)만 추가한다.
-- GamePix: 외부 요청 없음, 모든 자산 번들. 음악 루프는 16000 Hz 모노 16비트, 1 MB 이하.
+- GamePix: GamePix SDK 외 외부 요청 없음, 모든 자산 번들. 음악 루프는 16000 Hz 모노 16비트, 1 MB 이하.
 
 ## Evidence
 - `flutter analyze`, `flutter test`, `flutter test --platform chrome test/web`

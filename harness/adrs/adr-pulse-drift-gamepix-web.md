@@ -4,10 +4,13 @@ title: GamePix 배포에 SDK 없는 GAMEPIX 빌드 플래그 사용
 status: accepted
 related_specs:
   - feature-pulse-drift-gamepix
+  - feature-gamepix-sdk
   - feature-retention-polish
 ---
 
 # ADR: GamePix 배포에 SDK 없는 GAMEPIX 빌드 플래그 사용
+
+> 2026-11-28: SDK 없음/광고 없음 결정은 `adr-gamepix-sdk`가 대체한다(GamePix SDK v3 어댑터와 판 사이 전면 광고). `GAMEPIX` 플래그, 외부 링크 없음, Roboto 번들, CSS 로딩 화면 결정은 유효하다. 아래는 당시 결정 기록이다.
 
 ## Context
 

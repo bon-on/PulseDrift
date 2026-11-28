@@ -43,7 +43,8 @@ session (`.playback`) ignores the silent switch and interrupts the user's music.
   Effective mute = user mute OR `GamePlatform.isAudioMuted`, which the
   CrazyGames adapter reads from `SDK.game.settings.muteAudio` and refreshes
   through `addSettingsChangeListener` (an SDK without settings stays audible);
-  GamePix/no-op is false. Muting stops the loop; unmuting resumes it while a
+  the GamePix adapter is true while the Player pauses or sends `soundOff`
+  (feature-gamepix-sdk); no-op is false. Muting stops the loop; unmuting resumes it while a
   run is active.
 - The toggle is excluded from keyboard focus together with the rest of the
   game while the tutorial card is open (same as "?"), refocuses the game after
@@ -67,7 +68,7 @@ session (`.playback`) ignores the silent switch and interrupts the user's music.
 
 ## Constraints
 - No new package dependencies. English ASCII strings in `lib/`.
-- GamePix: no external requests; audio is bundled.
+- GamePix: no external requests besides the GamePix SDK; audio is bundled.
 
 ## Evidence
 - `python3 tool/generate_sounds.py` twice with identical `shasum`

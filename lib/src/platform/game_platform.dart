@@ -5,9 +5,9 @@ import 'game_platform_factory_stub.dart'
 /// Hooks a distribution portal needs from the game loop.
 ///
 /// Mobile and plain web builds use [NoopGamePlatform]; CrazyGames web builds
-/// (`--dart-define=CRAZYGAMES=true`) use the SDK-backed implementation, and
-/// GamePix web builds (`--dart-define=GAMEPIX=true`) use [NoopGamePlatform.gamePix]
-/// (no SDK, no external network, no ads).
+/// (`--dart-define=CRAZYGAMES=true`) use the CrazyGames SDK adapter and
+/// GamePix web builds (`--dart-define=GAMEPIX=true`) the GamePix SDK v3
+/// adapter (feature-gamepix-sdk).
 abstract class GamePlatform {
   const GamePlatform();
 
@@ -24,7 +24,21 @@ abstract class GamePlatform {
   /// Calls [listener] when [isAudioMuted] may have changed.
   void addAudioMuteListener(void Function() listener) {}
 
-  /// Whether ad networks (AdMob) may be used. Portal builds never show ads.
+  /// Registers a callback for portal pause/resume requests (GamePix Player
+  /// overlays and ads); null unregisters. Platforms without such events
+  /// ignore it.
+  void setPauseListener(void Function(bool paused)? listener) {}
+
+  /// Whether [showRunBreakAd] may show an ad, so callers only wait for it on
+  /// such platforms (feature-gamepix-sdk).
+  bool get showsRunBreakAds => false;
+
+  /// Shows an ad between runs. Completes when the ad ends, fails or is
+  /// skipped (cooldown), so callers can always continue afterwards.
+  Future<void> showRunBreakAd() async {}
+
+  /// Whether ad networks (AdMob) may be used. Portal builds never show AdMob
+  /// ads (GamePix shows its own break ads through [showRunBreakAd]).
   bool get allowsAds;
 
   /// Whether the post-game prompt to submit scores to the Bon-on leaderboard
@@ -37,11 +51,6 @@ class NoopGamePlatform extends GamePlatform {
     this.allowsAds = true,
     this.allowsResultRegistration = true,
   });
-
-  /// GamePix portal build: SDK-free, no ads, no result upload.
-  const NoopGamePlatform.gamePix()
-    : allowsAds = false,
-      allowsResultRegistration = false;
 
   @override
   Future<void> initialize() async {}

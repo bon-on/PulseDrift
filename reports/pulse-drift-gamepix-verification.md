@@ -6,6 +6,8 @@
 - 날짜: 2026-10-31
 - 환경: Flutter (Homebrew), macOS, Google Chrome headless
 
+> 2026-11-28: 이 보고서는 SDK 없는 번들(2026-10-31) 기준의 기록이다. GamePix SDK v3 연동(`feature-gamepix-sdk`) 뒤에는 번들이 integration.gamepix.com에서 SDK를 받고 SDK가 자체 요청을 보내므로 "외부 호스트 요청 0"은 더 이상 성립하지 않는다. 연동 뒤 검증(analyze, test, web test, 두 빌드 스크립트)은 `harness/specs/feature-gamepix-sdk.md` Evidence 기준으로 했고, SDK 연동 번들의 headless Chrome 네트워크/오버플로 확인은 아직 하지 않았다.
+
 ## 실행한 검증
 
 | 검증 | 결과 |

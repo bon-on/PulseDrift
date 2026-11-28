@@ -100,7 +100,15 @@ class _GameScreenState extends State<GameScreen>
   late final math.Random _random;
   final DriftFx _fx = DriftFx();
   Duration? _lastTick;
+  // Whether the run may advance and take input: the app is in the foreground
+  // and the portal (GamePix pause, feature-gamepix-sdk) has not paused it.
   bool _appActive = true;
+  bool _lifecycleActive = true;
+  // Hidden apps silence the loop; an inactive (still visible) one keeps it.
+  bool _lifecycleVisible = true;
+  bool _portalPaused = false;
+  // A run break ad (GamePix) is showing; summary input waits for it.
+  bool _breakAdInProgress = false;
   bool _wasGameOver = false;
   int _completedRuns = 0;
   final FocusNode _gameFocus = FocusNode(debugLabel: 'game');
@@ -153,11 +161,12 @@ class _GameScreenState extends State<GameScreen>
     );
     widget.platform.addAudioMuteListener(_sound.refreshMute);
     final lifecycleState = WidgetsBinding.instance.lifecycleState;
-    _appActive =
+    _lifecycleActive =
         lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
-    _sound.setAppVisible(
-      _appActive || lifecycleState == AppLifecycleState.inactive,
-    );
+    _lifecycleVisible =
+        _lifecycleActive || lifecycleState == AppLifecycleState.inactive;
+    _appActive = _lifecycleActive;
+    _sound.setAppVisible(_lifecycleVisible);
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycleChanged);
     _controller = GameController(
       bestScoreStore: widget.bestScoreStore ?? SharedPrefsBestScoreStore(),
@@ -176,12 +185,31 @@ class _GameScreenState extends State<GameScreen>
     _sound.startBackgroundLoop();
     _ticker = createTicker(_onTick)..start();
     unawaited(_maybeShowTutorial());
+    // Registered last: a pause that arrived earlier is replayed at once and
+    // needs the controller.
+    widget.platform.setPauseListener(_onPortalPause);
   }
 
   void _onLifecycleChanged(AppLifecycleState state) {
-    _appActive = state == AppLifecycleState.resumed;
+    _lifecycleActive = state == AppLifecycleState.resumed;
+    _lifecycleVisible = _lifecycleActive || state == AppLifecycleState.inactive;
+    _applyActive();
+  }
+
+  void _onPortalPause(bool paused) {
+    if (!mounted) return;
+    _portalPaused = paused;
+    _applyActive();
+  }
+
+  /// Freezes the run (simulation, effects, input) while the app is in the
+  /// background or the portal paused it, and lets it go on once both allow.
+  void _applyActive() {
+    final active = _lifecycleActive && !_portalPaused;
+    if (active != _appActive) setState(() => _appActive = active);
+    // Drop the paused time so the next step stays small.
     _lastTick = null;
-    _sound.setAppVisible(_appActive || state == AppLifecycleState.inactive);
+    _sound.setAppVisible(_lifecycleVisible && !_portalPaused);
     _syncGameplay();
   }
 
@@ -358,6 +386,7 @@ class _GameScreenState extends State<GameScreen>
 
   @override
   void dispose() {
+    widget.platform.setPauseListener(null);
     _lifecycle.dispose();
     _controller.removeListener(_handleGameOverAds);
     _ticker.dispose();
@@ -526,6 +555,27 @@ class _GameScreenState extends State<GameScreen>
   void _playAgain() => _newRun(start: true);
 
   void _backToMenu() => _newRun(start: false);
+
+  /// Wraps a run summary action that starts the next run: on platforms with
+  /// break ads (GamePix, feature-gamepix-sdk) the ad plays first. Elsewhere
+  /// the action is returned unchanged. Presses while the ad runs or the
+  /// portal paused the game are ignored, and the action only runs if the
+  /// summary is still up after the ad.
+  VoidCallback _afterBreakAd(VoidCallback action) {
+    if (!widget.platform.showsRunBreakAds) return action;
+    return () async {
+      if (_breakAdInProgress || _portalPaused || !_summaryOpen) return;
+      setState(() => _breakAdInProgress = true);
+      try {
+        await widget.platform.showRunBreakAd();
+      } catch (_) {
+        // A failed ad never keeps the player from the next run.
+      }
+      if (!mounted) return;
+      setState(() => _breakAdInProgress = false);
+      if (_summaryOpen) action();
+    };
+  }
 
   void _handleGameOverAds() {
     _syncGameplay();
@@ -708,11 +758,16 @@ class _GameScreenState extends State<GameScreen>
             ),
             if (_summaryOpen && report != null)
               Positioned.fill(
-                child: RunSummaryOverlay(
-                  report: report,
-                  palette: palette,
-                  onPlayAgain: _playAgain,
-                  onMenu: _backToMenu,
+                // No taps reach the summary while a portal pause or a break
+                // ad holds the game.
+                child: AbsorbPointer(
+                  absorbing: _portalPaused || _breakAdInProgress,
+                  child: RunSummaryOverlay(
+                    report: report,
+                    palette: palette,
+                    onPlayAgain: _afterBreakAd(_playAgain),
+                    onMenu: _afterBreakAd(_backToMenu),
+                  ),
                 ),
               ),
             if (_themesOpen)
